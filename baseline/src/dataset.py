@@ -9,12 +9,15 @@ The EWT IOB2 format is 5-column tab-separated with comment lines (starting with 
 
 Only columns 2 (token) and 3 (label) are used.
 """
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 import torch
 from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizerFast
+
+logger = logging.getLogger(__name__)
 
 IGNORED_LABEL_ID: int = -100
 
@@ -27,6 +30,7 @@ class Sentence:
 
 def read_iob2(path: Path) -> list[Sentence]:
     """Read an EWT IOB2 file and return a list of Sentence objects."""
+    logger.info(f"Reading IOB2 file: {path}")
     sentences: list[Sentence] = []
     current_words: list[str] = []
     current_labels: list[str] = []
@@ -49,6 +53,7 @@ def read_iob2(path: Path) -> list[Sentence]:
     if current_words:
         sentences.append(Sentence(words=current_words, labels=current_labels))
 
+    logger.info(f"Loaded {len(sentences)} sentences from {path.name}")
     return sentences
 
 
@@ -65,6 +70,7 @@ def build_label_vocab(sentences: list[Sentence]) -> tuple[dict[str, int], dict[i
     sorted_labels = ["O"] + sorted(l for l in unique_labels if l != "O")
     label2id: dict[str, int] = {label: i for i, label in enumerate(sorted_labels)}
     id2label: dict[int, str] = {i: label for label, i in label2id.items()}
+    logger.info(f"Built label vocabulary: {len(label2id)} labels — {list(label2id.keys())}")
     return label2id, id2label
 
 
@@ -76,7 +82,9 @@ class NERDataset(Dataset):
         self._tokenizer = tokenizer
         self._label2id = label2id
         self._max_length = max_length # Truncate long sentences to reduce memory usage
+        logger.info(f"Tokenizing and aligning labels for {len(sentences)} sentences ...")
         self._items = [self._tokenize_and_align(s) for s in sentences]
+        logger.info(f"Dataset ready — {len(self._items)} samples")
 
     def _tokenize_and_align(self, sentence: Sentence) -> dict[str, torch.Tensor]:
         """Tokenize a sentence and align original token labels to subword tokens.
@@ -97,6 +105,7 @@ class NERDataset(Dataset):
             "labels":         [-100, 1,   -100, -100, 2,      0,     0,    -100 ]
                                CLS  B-LOC  skip  skip I-LOC    O      O      SEP
         """
+        logger.debug(f"Tokenizing sentence: {sentence.words}")
         encoding = self._tokenizer(
             sentence.words,
             is_split_into_words=True,
@@ -119,6 +128,7 @@ class NERDataset(Dataset):
                 aligned_labels.append(IGNORED_LABEL_ID)
             previous_word_id = word_id
 
+        logger.debug(f"Aligned labels for sentence: {aligned_labels}")
         return {
             "input_ids": encoding["input_ids"].squeeze(0),
             "attention_mask": encoding["attention_mask"].squeeze(0),
@@ -143,6 +153,7 @@ def collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
     Returns:
         A dict with keys "input_ids", "attention_mask", and "labels", where each value is a padded tensor of shape [batch_size, max_seq_len].
     """
+    logger.debug(f"Collating batch of {len(batch)} samples with varying sequence lengths ...")
     input_ids = torch.nn.utils.rnn.pad_sequence(
         [item["input_ids"] for item in batch],
         batch_first=True, # To have batch_size as the first dimension
@@ -158,4 +169,5 @@ def collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
         batch_first=True,
         padding_value=IGNORED_LABEL_ID,
     )
+    logger.debug(f"Batch collated — input_ids: {input_ids.shape}, attention_mask: {attention_mask.shape}, labels: {labels.shape}")
     return {"input_ids": input_ids, "attention_mask": attention_mask, "labels": labels}

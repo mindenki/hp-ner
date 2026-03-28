@@ -1,4 +1,5 @@
 import json
+import logging
 import random
 from dataclasses import dataclass
 from typing import Optional
@@ -12,6 +13,8 @@ from transformers import get_linear_schedule_with_warmup
 
 from src.dataset import NERDataset, collate_fn
 from src.model import DeBERTaNER
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -29,6 +32,7 @@ class Trainer:
     """Manual PyTorch training loop for DeBERTaNER."""
 
     def __init__(self, model: DeBERTaNER, config: TrainConfig, output_dir: Path) -> None:
+        logger.info(f"Initializing trainer with config: {config}")
         self._model = model
         self._config = config
         self._output_dir = output_dir
@@ -38,9 +42,11 @@ class Trainer:
         """Run the full training loop and save the best checkpoint."""
         self._set_seeds()
 
+        logger.info("Moving model to device: %s", self._config.device)
         device = torch.device(self._config.device) # cuda or cpu
         self._model.model.to(device)
 
+        logger.info("Creating data loaders...")
         train_loader = DataLoader(
             train_dataset,
             batch_size=self._config.batch_size, # number of sentences per batch
@@ -54,13 +60,20 @@ class Trainer:
             collate_fn=collate_fn,
         )
 
+        logger.info("Building optimizer...")
         optimizer = self._build_optimizer()
         total_steps = len(train_loader) * self._config.num_epochs
         warmup_steps = int(total_steps * self._config.warmup_ratio)
+        logger.info(f"Total training steps: {total_steps}  Warmup steps: {warmup_steps}")
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
             num_warmup_steps=warmup_steps,
             num_training_steps=total_steps,
+        )
+
+        logger.info(
+            f"Training started — device={self._config.device}  epochs={self._config.num_epochs}  batch_size={self._config.batch_size}  "
+            f"lr={self._config.learning_rate:.2e}  total_steps={total_steps}  warmup_steps={warmup_steps}",
         )
 
         id2label = self._model.model.config.id2label
@@ -70,21 +83,23 @@ class Trainer:
             train_loss = self._train_epoch(train_loader, optimizer, scheduler, device)
             dev_f1 = self._evaluate(dev_loader, id2label, device)
 
-            print(f"Epoch {epoch}/{self._config.num_epochs}  "
-                  f"loss={train_loss:.4f}  dev_f1={dev_f1:.4f}")
+            logger.info(
+                f"Epoch {epoch}/{self._config.num_epochs} — train_loss={train_loss:.4f}  dev_f1={dev_f1:.4f}",
+            )
 
             self._history.append({"epoch": epoch, "train_loss": train_loss, "dev_f1": dev_f1})
 
             if dev_f1 > best_f1:
                 best_f1 = dev_f1
                 self._model.save(self._output_dir / "best_model")
-                print(f"[ >:) ] New best model saved (f1={best_f1:.4f})")
+                logger.info(f"New best model saved (dev_f1={best_f1:.4f})")
 
         self._output_dir.mkdir(parents=True, exist_ok=True)
         history_path = self._output_dir / "training_history.json"
         history_path.write_text(json.dumps(self._history, indent=2), encoding="utf-8")
-        print(f"\nTraining complete. Best dev F1: {best_f1:.4f}")
-        print(f"Checkpoint: {self._output_dir / 'best_model'}")
+        logger.info(
+            f"Training complete — best dev F1: {best_f1:.4f}  checkpoint: {self._output_dir / 'best_model'}  history: {history_path}",
+        )
 
     def _train_epoch(self, dataloader: DataLoader, optimizer: torch.optim.Optimizer, scheduler, device: torch.device) -> float:
         """Train for one epoch and return average loss.
@@ -106,21 +121,30 @@ class Trainer:
         self._model.model.train() # switch model to training mode (enables dropout, etc.)
         total_loss = 0.0
 
-        for batch in dataloader:
+        logger.debug(f"Training epoch with {len(dataloader)} batches ...")
+        for batch_idx, batch in enumerate(dataloader):
             batch = {k: v.to(device) for k, v in batch.items()} # move batch tensors to 'device' as DataLoader returns CPU tensors by default
+            
             outputs = self._model.model(**batch)
+            logger.debug(f"Batch {batch_idx + 1}/{len(dataloader)} — raw loss: {outputs.loss.item():.4f}")
             loss = outputs.loss
+            logger.debug(f"Batch {batch_idx + 1}/{len(dataloader)} — loss after scaling: {loss.item():.4f}")
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self._model.model.parameters(), max_norm=1.0) # scale all gradients down proportionally if that norm exceeds 1.0
             optimizer.step()
+            logger.debug(f"Batch {batch_idx + 1}/{len(dataloader)} — optimizer step completed")
             scheduler.step() # update learning rate
             optimizer.zero_grad()
             total_loss += loss.item()
+
+            if (batch_idx + 1) % 50 == 0:
+                logger.debug(f"  batch {batch_idx + 1}/{len(dataloader)} — loss={loss.item():.4f}  lr={scheduler.get_last_lr()[0]:.2e}")
 
         return total_loss / len(dataloader) # average loss per batch
 
     def _evaluate(self, dataloader: DataLoader, id2label: dict[int, str], device: torch.device) -> float:
         """Evaluate on the dev set and return micro-averaged F1 score."""
+        logger.debug(f"Running evaluation on dev set ({len(dataloader)} batches) ...")
         self._model.model.eval() # turn the switch to evaluation mode (disables dropout, etc.)
         # we store the true and predicted sequences for F1 calculation
         true_sequences: list[list[str]] = []
@@ -132,7 +156,7 @@ class Trainer:
                 batch = {k: v.to(device) for k, v in batch.items()} # move batch tensors to 'device'
                 outputs = self._model.model(**batch) # based on the input batch, we get a prediction for all tokens
                 predictions = outputs.logits.argmax(dim=-1).cpu() # for each token, we predict the label with the highest logit score
-
+                logger.debug(f"Batch evaluation — predictions shape: {predictions.shape}  labels shape: {labels.shape}")
                 for pred_seq, label_seq in zip(predictions, labels): # iterate over each sentence in the batch
                     true_sent: list[str] = []
                     pred_sent: list[str] = []
@@ -145,9 +169,9 @@ class Trainer:
                     # after processing all tokens in the sentence, we have the full sequence of true and predicted labels for that sentence
                     true_sequences.append(true_sent)
                     pred_sequences.append(pred_sent)
-
+        logger.debug(f"Evaluation complete — total sentences: {len(true_sequences)}")
         return f1_score(true_sequences, pred_sequences, average="micro", zero_division=0)
-    
+
     def _build_optimizer(self) -> torch.optim.AdamW:
         """Set up AdamW optimizer with separate weight decay for bias and LayerNorm parameters."""
         no_decay = {"bias", "LayerNorm.weight"}
@@ -159,6 +183,8 @@ class Trainer:
             else:
                 decay_params.append(param)
 
+        logger.debug(f"Optimizer parameter groups — with decay: {len(decay_params)}  without decay: {len(no_decay_params)}")
+
         param_groups = [
             {"params": decay_params,    "weight_decay": self._config.weight_decay},
             {"params": no_decay_params, "weight_decay": 0.0},
@@ -167,6 +193,7 @@ class Trainer:
 
     def _set_seeds(self) -> None:
         """Set random seeds for reproducibility."""
+        logger.debug(f"Setting random seeds to {self._config.seed}")
         random.seed(self._config.seed)
         np.random.seed(self._config.seed)
         torch.manual_seed(self._config.seed)
