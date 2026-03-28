@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+from typing import Self
 import logging
 from pathlib import Path
 
@@ -48,7 +47,7 @@ class DeBERTaNER:
         logger.info("Checkpoint saved successfully")
 
     @classmethod
-    def load(cls, path: Path) -> DeBERTaNER:
+    def load(cls, path: Path) -> Self:
         """Load a previously saved checkpoint."""
         logger.info("Loading checkpoint from: %s", path)
         instance = cls.__new__(cls) # creates a blank instance without calling __init__

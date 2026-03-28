@@ -67,7 +67,7 @@ def build_label_vocab(sentences: list[Sentence]) -> tuple[dict[str, int], dict[i
     for sentence in sentences:
         unique_labels.update(sentence.labels)
 
-    sorted_labels = ["O"] + sorted(l for l in unique_labels if l != "O")
+    sorted_labels = ["O"] + sorted(_l for _l in unique_labels if _l != "O")
     label2id: dict[str, int] = {label: i for i, label in enumerate(sorted_labels)}
     id2label: dict[int, str] = {i: label for label, i in label2id.items()}
     logger.info(f"Built label vocabulary: {len(label2id)} labels — {list(label2id.keys())}")

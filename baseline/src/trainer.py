@@ -160,11 +160,11 @@ class Trainer:
                 for pred_seq, label_seq in zip(predictions, labels): # iterate over each sentence in the batch
                     true_sent: list[str] = []
                     pred_sent: list[str] = []
-                    for p, l in zip(pred_seq.tolist(), label_seq.tolist()): # iterate over each token in the sentence
-                        if l == -100: # ignore special tokens
+                    for p, _l in zip(pred_seq.tolist(), label_seq.tolist()): # iterate over each token in the sentence
+                        if _l == -100: # ignore special tokens
                             continue
                         # append the predicted and true labels for this token
-                        true_sent.append(id2label[l])
+                        true_sent.append(id2label[_l])
                         pred_sent.append(id2label[p])
                     # after processing all tokens in the sentence, we have the full sequence of true and predicted labels for that sentence
                     true_sequences.append(true_sent)
