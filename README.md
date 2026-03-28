@@ -64,6 +64,12 @@ uv sync
 
 This creates a `.venv/` directory and installs all packages pinned in `uv.lock`.
 
+> **GPU default:** This project is configured so `torch` is resolved from the official PyTorch CUDA 12.8 index when syncing with `uv`, enabling CUDA on supported NVIDIA systems.
+>
+> **CPU-only fallback (optional):** If you intentionally want CPU-only PyTorch, reinstall torch in the environment with:
+>
+> `uv pip install --python .venv/bin/python --index-url https://download.pytorch.org/whl/cpu --force-reinstall torch`
+
 ### 2. Activate the virtual environment
 
 ```bash

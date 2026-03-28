@@ -43,8 +43,8 @@ class Trainer:
         """Run the full training loop and save the best checkpoint."""
         self._set_seeds()
 
-        logger.info("Moving model to device: %s", self._config.device)
-        device = torch.device(self._config.device) # cuda or cpu
+        device = self._resolve_device(self._config.device)
+        logger.info("Moving model to device: %s", device)
         self._model.to(device)
 
         logger.info("Creating data loaders...")
@@ -73,7 +73,7 @@ class Trainer:
         )
 
         logger.info(
-            f"Training started — device={self._config.device}  epochs={self._config.num_epochs}  batch_size={self._config.batch_size}  "
+            f"Training started — device={device}  epochs={self._config.num_epochs}  batch_size={self._config.batch_size}  "
             f"lr={self._config.learning_rate:.2e}  total_steps={total_steps}  warmup_steps={warmup_steps}",
         )
 
@@ -200,3 +200,28 @@ class Trainer:
         torch.manual_seed(self._config.seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(self._config.seed)
+
+    @staticmethod
+    def _resolve_device(device_name: str) -> torch.device:
+        """Resolve a requested device string to a safe torch.device.
+
+        Behavior:
+        - "cpu" -> CPU
+        - "cuda", "cuda:0", ... -> CUDA if available, otherwise fallback to CPU
+        - "auto" -> CUDA if available, otherwise CPU
+        """
+        requested = (device_name or "auto").strip().lower()
+
+        if requested == "auto":
+            return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        if requested.startswith("cuda"):
+            if not torch.cuda.is_available():
+                logger.warning(
+                    "CUDA was requested but this PyTorch build has no CUDA support or no GPU is available. "
+                    "Falling back to CPU.",
+                )
+                return torch.device("cpu")
+            return torch.device(requested)
+
+        return torch.device(requested)
