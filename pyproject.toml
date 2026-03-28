@@ -19,12 +19,6 @@ dependencies = [
     "numpy>=1.26",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.0",
-    "pytest-cov>=5.0",
-]
-
 [project.scripts]
 train = "baseline.scripts.train:main"
 evaluate = "baseline.scripts.evaluate:main"

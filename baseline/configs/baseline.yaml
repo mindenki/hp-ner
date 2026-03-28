@@ -3,8 +3,8 @@ model:
   max_length: 128
 
 training:
-  num_epochs: 5
-  learning_rate: 2.0e-5
+  num_epochs: 1
+  learning_rate: 5.0e-6
   batch_size: 16
   warmup_ratio: 0.1
   weight_decay: 0.01

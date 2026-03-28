@@ -85,7 +85,7 @@ def main() -> None:
     predictions = evaluator.predict(dataset)
 
     pred_path = output_dir / "predictions" / f"{args.split}.iob2"
-    evaluator.write_predictions(dataset.sentences, predictions, pred_path)
+    evaluator.write_predictions(dataset, predictions, pred_path)
 
     if args.split == "dev":
         # Gold labels are available on dev — run span_f1.py for the official metric.
