@@ -1,0 +1,21 @@
+model:
+  name: microsoft/deberta-v3-base
+  max_length: 128
+
+training:
+  num_epochs: 5
+  learning_rate: 2.0e-5
+  batch_size: 16
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+  device: cpu        # set to cpu if no GPU
+  seed: 42
+
+paths:
+  train: data/en_ewt-ud-train.iob2
+  dev: data/en_ewt-ud-dev.iob2
+  test: data/en_ewt-ud-test-masked.iob2
+  output_dir: outputs/baseline
+
+evaluation:
+  batch_size: 32

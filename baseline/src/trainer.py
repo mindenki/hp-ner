@@ -33,7 +33,8 @@ class Trainer:
 
     def __init__(self, model: DeBERTaNER, config: TrainConfig, output_dir: Path) -> None:
         logger.info(f"Initializing trainer with config: {config}")
-        self._model = model
+        self._ner = model           # DeBERTaNER wrapper — used for save/load
+        self._model = model.model   # HuggingFace nn.Module — used for forward passes
         self._config = config
         self._output_dir = output_dir
         self._history: list[dict] = []
@@ -44,7 +45,7 @@ class Trainer:
 
         logger.info("Moving model to device: %s", self._config.device)
         device = torch.device(self._config.device) # cuda or cpu
-        self._model.model.to(device)
+        self._model.to(device)
 
         logger.info("Creating data loaders...")
         train_loader = DataLoader(
@@ -76,7 +77,7 @@ class Trainer:
             f"lr={self._config.learning_rate:.2e}  total_steps={total_steps}  warmup_steps={warmup_steps}",
         )
 
-        id2label = self._model.model.config.id2label
+        id2label = self._model.config.id2label
         best_f1 = 0.0
 
         for epoch in range(1, self._config.num_epochs + 1):
@@ -91,7 +92,7 @@ class Trainer:
 
             if dev_f1 > best_f1:
                 best_f1 = dev_f1
-                self._model.save(self._output_dir / "best_model")
+                self._ner.save(self._output_dir / "best_model")
                 logger.info(f"New best model saved (dev_f1={best_f1:.4f})")
 
         self._output_dir.mkdir(parents=True, exist_ok=True)
@@ -118,19 +119,19 @@ class Trainer:
           5. optimizer.zero_grad()  — clears all .grad tensors so the next batch's
                                       gradients don't accumulate on top of these.
         """
-        self._model.model.train() # switch model to training mode (enables dropout, etc.)
+        self._model.train() # switch model to training mode (enables dropout, etc.)
         total_loss = 0.0
 
         logger.debug(f"Training epoch with {len(dataloader)} batches ...")
         for batch_idx, batch in enumerate(dataloader):
             batch = {k: v.to(device) for k, v in batch.items()} # move batch tensors to 'device' as DataLoader returns CPU tensors by default
             
-            outputs = self._model.model(**batch)
+            outputs = self._model(**batch)
             logger.debug(f"Batch {batch_idx + 1}/{len(dataloader)} — raw loss: {outputs.loss.item():.4f}")
             loss = outputs.loss
             logger.debug(f"Batch {batch_idx + 1}/{len(dataloader)} — loss after scaling: {loss.item():.4f}")
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(self._model.model.parameters(), max_norm=1.0) # scale all gradients down proportionally if that norm exceeds 1.0
+            torch.nn.utils.clip_grad_norm_(self._model.parameters(), max_norm=1.0) # scale all gradients down proportionally if that norm exceeds 1.0
             optimizer.step()
             logger.debug(f"Batch {batch_idx + 1}/{len(dataloader)} — optimizer step completed")
             scheduler.step() # update learning rate
@@ -145,7 +146,7 @@ class Trainer:
     def _evaluate(self, dataloader: DataLoader, id2label: dict[int, str], device: torch.device) -> float:
         """Evaluate on the dev set and return micro-averaged F1 score."""
         logger.debug(f"Running evaluation on dev set ({len(dataloader)} batches) ...")
-        self._model.model.eval() # turn the switch to evaluation mode (disables dropout, etc.)
+        self._model.eval() # turn the switch to evaluation mode (disables dropout, etc.)
         # we store the true and predicted sequences for F1 calculation
         true_sequences: list[list[str]] = []
         pred_sequences: list[list[str]] = []
@@ -154,7 +155,7 @@ class Trainer:
             for batch in dataloader:
                 labels = batch["labels"]
                 batch = {k: v.to(device) for k, v in batch.items()} # move batch tensors to 'device'
-                outputs = self._model.model(**batch) # based on the input batch, we get a prediction for all tokens
+                outputs = self._model(**batch) # based on the input batch, we get a prediction for all tokens
                 predictions = outputs.logits.argmax(dim=-1).cpu() # for each token, we predict the label with the highest logit score
                 logger.debug(f"Batch evaluation — predictions shape: {predictions.shape}  labels shape: {labels.shape}")
                 for pred_seq, label_seq in zip(predictions, labels): # iterate over each sentence in the batch
@@ -177,7 +178,7 @@ class Trainer:
         no_decay = {"bias", "LayerNorm.weight"}
         decay_params, no_decay_params = [], []
 
-        for name, param in self._model.model.named_parameters():
+        for name, param in self._model.named_parameters():
             if any(nd in name for nd in no_decay):
                 no_decay_params.append(param)
             else:

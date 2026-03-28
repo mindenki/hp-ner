@@ -78,12 +78,12 @@ class NERDataset(Dataset):
     """PyTorch Dataset for token classification with subword label alignment."""
 
     def __init__(self, sentences: list[Sentence], tokenizer: PreTrainedTokenizerFast, label2id: dict[str, int], max_length: int = 128) -> None:
-        self._sentences = sentences
+        self.sentences = sentences
         self._tokenizer = tokenizer
         self._label2id = label2id
         self._max_length = max_length # Truncate long sentences to reduce memory usage
         logger.info(f"Tokenizing and aligning labels for {len(sentences)} sentences ...")
-        self._items = [self._tokenize_and_align(s) for s in sentences]
+        self._items = [self._tokenize_and_align(s) for s in self.sentences]
         logger.info(f"Dataset ready — {len(self._items)} samples")
 
     def _tokenize_and_align(self, sentence: Sentence) -> dict[str, torch.Tensor]:
