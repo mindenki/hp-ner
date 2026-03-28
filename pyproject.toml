@@ -25,6 +25,10 @@ dev = [
     "pytest-cov>=5.0",
 ]
 
+[project.scripts]
+train = "baseline.scripts.train:main"
+evaluate = "baseline.scripts.evaluate:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
