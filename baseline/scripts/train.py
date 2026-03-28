@@ -29,13 +29,13 @@ logger = logging.getLogger(__name__)
 def _setup_logging() -> None:
     """Configure logging to output to stdout with a consistent format."""
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
-    logging.getLogger("transformers").setLevel(logging.INFO)
-
+    logging.getLogger("src").setLevel(logging.DEBUG)
+    # 🥹
 
 def main() -> None:
     _setup_logging()

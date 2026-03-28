@@ -125,15 +125,15 @@ class Trainer:
         logger.debug(f"Training epoch with {len(dataloader)} batches ...")
         for batch_idx, batch in enumerate(dataloader):
             batch = {k: v.to(device) for k, v in batch.items()} # move batch tensors to 'device' as DataLoader returns CPU tensors by default
-            
+
             outputs = self._model(**batch)
             logger.debug(f"Batch {batch_idx + 1}/{len(dataloader)} — raw loss: {outputs.loss.item():.4f}")
             loss = outputs.loss
             logger.debug(f"Batch {batch_idx + 1}/{len(dataloader)} — loss after scaling: {loss.item():.4f}")
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(self._model.parameters(), max_norm=1.0) # scale all gradients down proportionally if that norm exceeds 1.0
+            grad_norm = torch.nn.utils.clip_grad_norm_(self._model.parameters(), max_norm=1.0) # scale all gradients down proportionally if that norm exceeds 1.0
             optimizer.step()
-            logger.debug(f"Batch {batch_idx + 1}/{len(dataloader)} — optimizer step completed")
+            logger.debug(f"Batch {batch_idx + 1}/{len(dataloader)} — optimizer step completed  grad_norm={grad_norm:.4f}")
             scheduler.step() # update learning rate
             optimizer.zero_grad()
             total_loss += loss.item()

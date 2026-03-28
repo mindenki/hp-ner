@@ -2,6 +2,7 @@ from typing import Self
 import logging
 from pathlib import Path
 
+import torch
 from transformers import AutoModelForTokenClassification, AutoTokenizer, PreTrainedTokenizerFast
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ class DeBERTaNER:
             id2label=id2label,
             label2id=label2id,
             ignore_mismatched_sizes=True, # allows loading pretrained weights even if the classification head size doesn't match the pretrained model's original head size
+            torch_dtype=torch.float32, # deberta-v3-base ships as fp16; force fp32 for stable CPU training (fp16 underflows in Adam's second-moment estimates)
         )
         logger.info("Model ready — %d parameters", sum(p.numel() for p in self.model.parameters()))
 
