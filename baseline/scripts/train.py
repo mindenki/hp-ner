@@ -3,6 +3,10 @@
 Usage (from project root):
     uv run train                        # uses default config (baseline/configs/baseline.yaml)
     uv run train --config path/to.yaml  # override config
+
+Output behavior:
+    - Each training invocation writes to outputs/baseline/run_YYYYmmdd_HHMMSS/
+    - outputs/baseline/LATEST_RUN.txt is updated to the newest run name
 """
 from __future__ import annotations # for Anis' request
 
@@ -10,6 +14,7 @@ import argparse
 import json
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import yaml # to read config from yaml to python dict
@@ -55,8 +60,12 @@ def main() -> None:
     # Resolve data paths relative to project root.
     train_path = _PROJECT_ROOT / cfg["paths"]["train"]
     dev_path = _PROJECT_ROOT / cfg["paths"]["dev"]
-    output_dir = _PROJECT_ROOT / cfg["paths"]["output_dir"]
+    output_root = _PROJECT_ROOT / cfg["paths"]["output_dir"]
+    output_root.mkdir(parents=True, exist_ok=True)
+    run_name = datetime.now().strftime("run_%Y%m%d_%H%M%S")
+    output_dir = output_root / run_name
     output_dir.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Run output directory: {output_dir}")
 
     model_name: str = cfg["model"]["name"]
     max_length: int = cfg["model"]["max_length"]
@@ -73,6 +82,10 @@ def main() -> None:
     vocab_path = output_dir / "label2id.json"
     vocab_path.write_text(json.dumps(label2id, indent=2), encoding="utf-8")
     logger.info(f"Label vocab saved to: {vocab_path}")
+
+    latest_run_path = output_root / "LATEST_RUN.txt"
+    latest_run_path.write_text(run_name, encoding="utf-8")
+    logger.info(f"Updated latest run pointer: {latest_run_path} -> {run_name}")
 
     logger.info(f"Initializing DeBERTaNER with model name: {model_name}")
     model = DeBERTaNER(
