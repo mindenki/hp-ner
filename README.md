@@ -30,10 +30,12 @@ hp-ner/
 │   └── en_ewt-ud-test-masked.iob2
 ├── outputs/                     # Model checkpoints and predictions (git-ignored)
 │   └── baseline/
-│       ├── best_model/          # Saved after training
-│       ├── predictions/         # Written by evaluate.py
-│       ├── label2id.json        # Label vocabulary (built from training set)
-│       └── training_history.json
+│       ├── LATEST_RUN.txt       # Points to latest run folder
+│       └── run_YYYYmmdd_HHMMSS/
+│           ├── best_model/      # Saved after training
+│           ├── predictions/     # Written by evaluate.py
+│           ├── label2id.json    # Label vocabulary (built from training set)
+│           └── training_history.json
 └── span_f1.py                   # Place course-provided script here (project root)
 ```
 
@@ -42,12 +44,20 @@ hp-ner/
 ## Prerequisites
 
 - **Python >= 3.11**
-- **[uv](https://docs.astral.sh/uv/)** — fast Python package manager
+- **[uv](https://docs.astral.sh/uv/)** - fast Python package manager
 
 Install `uv` if you don't have it:
 
+**macOS / Linux**
+
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+**Windows (PowerShell)**
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 ---
@@ -117,9 +127,11 @@ Pass `--config path/to.yaml` to override the default config (`baseline/configs/b
 **What it does:**
 - Fine-tunes DeBERTaV3-base on the EWT training set
 - Evaluates on the dev set after each epoch (seqeval micro-F1)
-- Saves the best checkpoint (by dev F1) to `outputs/baseline/best_model/`
-- Saves the label vocabulary to `outputs/baseline/label2id.json`
-- Saves training history to `outputs/baseline/training_history.json`
+- Saves each training run into its own folder: `outputs/baseline/run_YYYYmmdd_HHMMSS/`
+- Saves the best checkpoint (by dev F1) to `outputs/baseline/run_YYYYmmdd_HHMMSS/best_model/`
+- Saves the label vocabulary to `outputs/baseline/run_YYYYmmdd_HHMMSS/label2id.json`
+- Saves training history to `outputs/baseline/run_YYYYmmdd_HHMMSS/training_history.json`
+- Updates `outputs/baseline/LATEST_RUN.txt` to point to the newest run
 
 ---
 
@@ -131,7 +143,13 @@ Pass `--config path/to.yaml` to override the default config (`baseline/configs/b
 uv run evaluate --split dev
 ```
 
-**Test set** (labels are masked — F1 not computed):
+Evaluate a specific run:
+
+```bash
+uv run evaluate --split dev --run run_YYYYmmdd_HHMMSS
+```
+
+**Test set** (labels are masked - F1 not computed):
 
 ```bash
 uv run evaluate --split test
@@ -146,7 +164,12 @@ python baseline/scripts/evaluate.py --split test
 
 Pass `--config path/to.yaml` to override the default config (`baseline/configs/baseline.yaml`).
 
-Predictions are written to `outputs/baseline/predictions/{split}.iob2` in IOB2 format.
+Run selection order in `evaluate.py`:
+- Explicit `--run`
+- `outputs/baseline/LATEST_RUN.txt`
+- Most recent `run_*` folder
+
+Predictions are written to `outputs/baseline/run_YYYYmmdd_HHMMSS/predictions/{split}.iob2` in IOB2 format.
 
 ---
 
@@ -174,4 +197,4 @@ All settings live in [baseline/configs/baseline.yaml](baseline/configs/baseline.
 
 - **Subword masking:** Only the first subword token of each word is labeled; continuation subwords are assigned `IGNORED_LABEL_ID = -100` and excluded from loss and evaluation.
 - **Truncation:** Sentences longer than `max_length` are truncated. Truncated tokens are predicted as `O` during evaluation.
-- **Label vocabulary:** Built from the training set and saved to `outputs/baseline/label2id.json`. The 7 labels are: `O`, `B-PER`, `I-PER`, `B-LOC`, `I-LOC`, `B-ORG`, `I-ORG`.
+- **Label vocabulary:** Built from the training set and saved to `outputs/baseline/run_YYYYmmdd_HHMMSS/label2id.json`. The 7 labels are: `O`, `B-PER`, `I-PER`, `B-LOC`, `I-LOC`, `B-ORG`, `I-ORG`.

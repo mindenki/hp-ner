@@ -3,6 +3,10 @@
 Usage (from project root):
     uv run train                        # uses default config (baseline/configs/baseline.yaml)
     uv run train --config path/to.yaml  # override config
+
+Output behavior:
+    - Each training invocation writes to outputs/baseline/run_YYYYmmdd_HHMMSS/
+    - outputs/baseline/LATEST_RUN.txt is updated to the newest run name
 """
 from __future__ import annotations # for Anis' request
 
