@@ -3,6 +3,7 @@
 Usage (from project root):
     uv run evaluate --split dev                        # uses default config
     uv run evaluate --split test                       # uses default config
+    uv run evaluate --split dev --run run_YYYYmmdd_HHMMSS  # evaluate a specific run
     uv run evaluate --split dev --config path/to.yaml  # override config
 """
 from __future__ import annotations # for Anis' request
@@ -25,6 +26,41 @@ from src.evaluator import Evaluator  # noqa: E402
 from src.model import DeBERTaNER  # noqa: E402
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_run_dir(output_root: Path, requested_run: str | None) -> Path:
+    """Resolve which run directory to evaluate.
+
+    Resolution order:
+    1) Explicit --run value
+    2) LATEST_RUN.txt pointer
+    3) Most recent run_* directory
+    4) Legacy output_root (for backwards compatibility)
+    """
+    if requested_run:
+        run_dir = output_root / requested_run
+        if not run_dir.exists():
+            logger.error(f"Requested run folder does not exist: {run_dir}")
+            sys.exit(1)
+        return run_dir
+
+    latest_ptr = output_root / "LATEST_RUN.txt"
+    if latest_ptr.exists():
+        run_name = latest_ptr.read_text(encoding="utf-8").strip()
+        run_dir = output_root / run_name
+        if run_dir.exists():
+            return run_dir
+        logger.warning(f"LATEST_RUN.txt points to missing folder: {run_dir}")
+
+    run_dirs = sorted(
+        [p for p in output_root.glob("run_*") if p.is_dir()],
+        key=lambda p: p.name,
+        reverse=True,
+    )
+    if run_dirs:
+        return run_dirs[0]
+
+    return output_root
 
 
 def _setup_logging() -> None:
@@ -52,13 +88,20 @@ def main() -> None:
         choices=["dev", "test"],
         help="Which split to evaluate",
     )
+    parser.add_argument(
+        "--run",
+        default=None,
+        help="Optional run folder name under output_dir (e.g., run_20260329_113000)",
+    )
     args = parser.parse_args()
 
     logger.info(f"Loading config from: {args.config}")
     with open(args.config, encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh)
 
-    output_dir = _PROJECT_ROOT / cfg["paths"]["output_dir"]
+    output_root = _PROJECT_ROOT / cfg["paths"]["output_dir"]
+    output_dir = _resolve_run_dir(output_root, args.run)
+    logger.info(f"Evaluating run directory: {output_dir}")
     split_path = _PROJECT_ROOT / cfg["paths"][args.split]
     device: str = cfg["training"]["device"]
     eval_batch_size: int = cfg["evaluation"]["batch_size"]
