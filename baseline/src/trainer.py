@@ -44,7 +44,7 @@ class Trainer:
         self._set_seeds()
 
         device = self._resolve_device(self._config.device)
-        logger.info("Moving model to device: %s", device)
+        logger.info(f"Moving model to device: {device}")
         self._model.to(device)
 
         logger.info("Creating data loaders...")
