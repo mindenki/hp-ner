@@ -85,43 +85,172 @@ def _starts_with_digit(s: str) -> bool:
     
 def _global_clean(entries: list[str]) -> list[str]:
     result = []
+    # Regex to catch possessive + generic relation (e.g., "Billingsley's niece")
+    possessive_pattern = re.compile(r"'s\s+(?:niece|nephew|aunt|uncle|cousin|grandmother|grandfather|grandparent|friend|neighbour|neighbor|boss|secretary|assistant|mentor|partner|predecessor|successor|killer|victim|captor|rescuer|owner|master|servant|minion|sidekick|companion|colleague|roommate|classmate|teammate|opponent|rival|competitor)$", re.IGNORECASE)
+    
     for e in entries:
         if e in _GLOBAL_SKIP_EXACT:
             continue
         if _is_date_or_year(e):
             continue
-        if _starts_with_digit(e):         
+        if _starts_with_digit(e):
             continue
         if any(p in e for p in _GLOBAL_SKIP_SUBSTRINGS):
             continue
+        if possessive_pattern.search(e):
+            continue
         result.append(e)
     return result
-
-# Per-label noise
-
-# CHARACTER
 def _clean_char(entries: list[str]) -> list[str]:
-    skip_substrings = [
+    # Existing skip_substrings and skip_exact (keep them, but you can shorten)
+    
+    import re
+    
+    skip_substrings = [ "whom", "whose",
+        "worker", "patient", "girl", "saleswoman", "groundskeeper", "lift attendant", 
+        "meeting assigner", "functionaries", "secretaries", "advisors", "milkman", "neighbour", 
+        "helper", "therapist", "gang", "kidnappers", "ancestor", "programme seller", "sycophants", 
+        "overweight", "bespectacled", "grubby-looking", "low-level", "british", "sudanese", "transylvanian",
+        "norwegian", "portuguese",
         "Unidentified",
         "'s parents", "'s mother", "'s father", "'s siblings",
         "'s children", "'s friends", "'s gang", "'s followers",
         "spectators", "participants", "members", "victims",
         "Template", "portrait", "Portrait",
+        # NEW: family relation keywords (anywhere, not just after apostrophe)
+        "mother", "father", "parent", "sibling", "brother", "sister",
+        "grandmother", "grandfather", "grandparent", "granddaughter", "grandson", "grandchild",
+        "aunt", "uncle", "cousin", "niece", "nephew",
+        "wife", "husband", "daughter", "son", "children", "child",
+        "fiancé", "fiancée", "ex-fiancé",
+        "girlfriend", "boyfriend", "partner", "spouse",
+        # Generic role / descriptor keywords (from your list)
+        " who ", " that ", " which ",   # relative clauses
+        " at the ", " in the ", " from the ", " of the ",
+        " with a ", " with an ", " with his ", " with her ",
+        " on a ", " on his ", " on her ",
+        " for the ", " during ", " in ", " at ",
+        "carrier", "guard", "minister", "headmaster", "headmistress",
+        "judge", "announcer", "band", "priest", "bloke", "knight", "wizard",
+        "witch", "traveller", "muggle", "sheriff", "tramp", "expellee",
+        "functionary", "landowner", "sycophant", "secretary", "servant",
+        "siblings", "half-siblings", "bullies", "bully",
+        "opponent", "partner", "friend", "pen-friend", "lady friend",
+        "love interest", "ex-fiancé", "admirer", "executioner", "betrayer",
+        "rescuer", "victim", "killer", "captor", "owner", "master", "handler",
+        "predecessor", "successor", "assistant", "secretary", "maid", "cook",
+        "bartender", "barman", "waiter", "waitress", "shopkeeper", "salesman",
+        "conductor", "driver", "porter", "guard", "healer", "nurse", "teacher",
+        "professor", "student", "prefect", "captain", "champion", "finalist",
+        "semi-finalist", "contestant", "competitor", "attendee", "guest",
+        "spectator", "participant", "member", "resident", "villager",
+        "employee", "official", "functionary", "agent", "deputy", "associate",
+        "colleague", "roommate", "classmate", "teammate", "rival",
+        "coach", "trainer", "manager", "supervisor", "superior", "subordinate",
+        "accomplice", "henchman", "minion", "follower", "disciple",
+        "supporter", "fan", "enthusiast", "collector", "trader", "dealer",
+        "smuggler", "poacher", "hunter", "forager", "farmer", "fisherman",
+        "miner", "carpenter", "blacksmith", "tailor", "baker", "brewer",
+        "innkeeper", "landlord", "tenant", "squatter", "vagrant", "beggar",
+        "orphan", "widow", "widower", "divorcee", "spinster", "bachelor",
+        "bride", "groom", "maid", "matron", "patron", "client", "customer",
+        "passerby", "stranger", "acquaintance", "ally", "enemy", "foe",
+        "scapegoat", "hostage", "prisoner", "escapee", "fugitive", "outlaw",
+        "pirate", "thief", "robber", "burglar", "pickpocket", "con artist",
+        "fraud", "impostor", "spy", "informer", "traitor", "defector",
+        "refugee", "immigrant", "emigrant", "expat", "tourist", "visitor",
+        "pilgrim", "explorer", "adventurer", "mercenary", "soldier", "guard",
+        "sentinel", "watchman", "patrol", "scout", "messenger", "herald",
+        "envoy", "ambassador", "diplomat", "consul", "attaché", "secretary",
+        "clerk", "scribe", "librarian", "archivist", "curator", "restorer",
+        "conservator", "artisan", "craftsman", "artist", "painter", "sculptor",
+        "musician", "singer", "dancer", "actor", "actress", "director",
+        "producer", "writer", "author", "poet", "journalist", "reporter",
+        "editor", "publisher", "printer", "bookseller", "librarian",
+        "teacher", "tutor", "instructor", "lecturer", "professor", "dean",
+        "headmaster", "headmistress", "principal", "chancellor", "rector",
+        "vicar", "priest", "monk", "nun", "friar", "abbot", "abbess", "bishop",
+        "archbishop", "cardinal", "pope", "prophet", "seer", "oracle",
+        "diviner", "soothsayer", "fortune teller", "medium", "channeler",
+        "healer", "doctor", "nurse", "midwife", "herbalist", "apothecary",
+        "alchemist", "potioneer", "enchanter", "sorcerer", "mage", "warlock",
+        "witch", "wizard", "sorceress", "enchantress", "necromancer",
+        "conjurer", "illusionist", "magician", "trickster", "jester", "clown",
+        "fool", "minstrel", "bard", "poet", "storyteller", "historian",
+        "chronicler", "scribe", "copyist", "illuminator", "calligrapher",
+        "cartographer", "mapmaker", "navigator", "pilot", "captain", "sailor",
+        "marine", "seaman", "fisher", "whaler", "merchant", "trader",
+        "shopkeeper", "vendor", "hawker", "peddler", "costermonger",
+        "moneylender", "banker", "financier", "investor", "speculator",
+        "broker", "agent", "middleman", "negotiator", "mediator", "arbitrator",
+        "judge", "lawyer", "barrister", "solicitor", "advocate", "counsel",
+        "prosecutor", "defender", "attorney", "notary", "magistrate", "justice",
+        "clerk", "bailiff", "sheriff", "constable", "marshal", "warden",
+        "ranger", "gamekeeper", "forester", "hunter", "trapper", "poacher",
+        "farmer", "rancher", "herder", "shepherd", "goatherd", "swineherd",
+        "cowherd", "stablehand", "groom", "jockey", "trainer", "breeder",
+        "veterinarian", "vet", "farrier", "blacksmith", "armorer", "weaponsmith",
+        "bowyer", "fletcher", "tanner", "leatherworker", "saddler", "cobbler",
+        "shoemaker", "tailor", "seamstress", "weaver", "spinner", "dyer",
+        "fuller", "bleacher", "launderer", "cleaner", "janitor", "sweeper",
+        "chimney sweep", "scavenger", "ragpicker", "dustman", "garbageman",
+        "nightman", "nightsoil collector", "cesspool cleaner", "ditch digger",
+        "road mender", "pavior", "stonemason", "bricklayer", "plasterer",
+        "tiler", "roofer", "carpenter", "joiner", "cabinetmaker", "upholsterer",
+        "glazier", "plumber", "pipefitter", "steamfitter", "electrician",
+        "lineman", "wireman", "cable jointer", "telephone repairman",
+        "telegraphist", "radio operator", "signalman", "switchman", "brakeman",
+        "fireman", "stoker", "engineer", "mechanic", "machinist", "fitter",
+        "turner", "miller", "grinder", "polisher", "buffing machine operator",
+        "plater", "coater", "painter", "sprayer", "dip coater", "anodizer",
+        "galvanizer", "electroplater", "heat treater", "annealer", "temperer",
+        "hardener", "case hardener", "quencher", "normalizer", "stress reliever"
     ]
+    
     skip_exact = {
         "Death Eaters", "Snatchers", "Rookwood Gang",
         "Ashwinders", "Most Dangerous Dark Wizards of All Time",
         "Fallen Fifty", "Protest floats", "Witch and Wizard Couple",
+        "A (individual)", "Dark Mark", "Squib Rights marches",
+        "The Toad", "The Old Librarian", "Wailing Widow", "Forsaken Lord",
+        "Phantom Rat", "Giant Phantom Rat", "Spectre Bat", "Ghost Crup",
+        "Ghost Moke", "Ghost bat", "Ghost bird", "Ghost cat", "Ghost goblin",
+        "Ghost horse", "Ghost owl", "Ghost letter", "Ghost band",
+        "Ghost carollers", "Ghost Court", "Ghost's council"
     }
+    # Compile patterns once outside the loop for efficiency
+    family_words = r'\b(?:mother|father|parent|sibling|brother|sister|grandmother|grandfather|grandparent|granddaughter|grandson|grandchild|aunt|uncle|cousin|niece|nephew|wife|husband|daughter|son|child|children|fianc(?:e|ée)|girlfriend|boyfriend|spouse|partner)\b'
+    role_indicators = r'\b(?:who|that|which|at the|in the|of the|with a|with his|for the|during)\b|\b(?:guard|minister|headmaster|judge|announcer|band|priest|bloke|knight|traveller|muggle|sheriff|tramp|expellee|functionary|landowner|sycophant|secretary|servant|bully|opponent|friend|pen-friend|executioner|betrayer|rescuer|victim|killer|captor|owner|master|handler|predecessor|successor|assistant|maid|cook|waiter|shopkeeper|salesman|conductor|driver|porter|healer|nurse|teacher|student|prefect|captain|champion|contestant|spectator|participant|member|resident|employee|official|agent|deputy|associate|colleague|teammate|rival|coach|trainer|manager|supervisor|superior|subordinate|henchman|minion|follower|enthusiast|trader|dealer|poacher|hunter|farmer|innkeeper|landlord|tenant|beggar|widow|bride|groom|client|customer|stranger|enemy|hostage|prisoner|escapee|fugitive|outlaw|thief|spy|traitor|refugee|tourist|pilgrim|explorer|adventurer|mercenary|soldier|messenger|envoy|ambassador|diplomat|clerk|scribe|librarian|curator|artisan|artist|musician|actor|writer|author|journalist|editor|tutor|lecturer|dean|monk|nun|prophet|seer|oracle|alchemist|sorcerer|mage|warlock|witch|wizard|enchantress|necromancer|magician|jester|bard|storyteller|historian|cartographer|sailor|merchant|banker|lawyer|judge|bailiff|ranger|gamekeeper|shepherd|stablehand|groom|blacksmith|carpenter|plumber|electrician|engineer|mechanic|worker|patient|girl|saleswoman|groundskeeper|lift attendant|meeting assigner|functionaries|secretaries|advisors|milkman|neighbour|helper|therapist|gang|kidnappers|ancestor|programme seller|sycophants|overweight|bespectacled|grubby-looking|low-level|british|sudanese|transylvanian|norwegian|portuguese|whom|whose|kept eyeing|werewolf capture unit|mentor)\b'
     
-    
-    return [
-        e for e in entries
-        if e not in skip_exact
-        and not any(s in e for s in skip_substrings)
-    ]
-    
+    family_re = re.compile(family_words, re.IGNORECASE)
+    role_re = re.compile(role_indicators, re.IGNORECASE)
+    descriptive_pattern = re.compile(r'\b(who|that|which)\s+(gave|fixed|stole|played|was|were|had|took|made|built|created|owned|rode|flew|killed|saved|helped|found|lost|bought|sold)\b', re.IGNORECASE)
+    officer_pattern = re.compile(r'\b(?:NYPD|Police|No\.?\s*\d+)\b', re.IGNORECASE)
 
+    result = []
+    for e in entries:
+        # Existing exact skip
+        if officer_pattern.search(e):
+            continue
+        if descriptive_pattern.search(e):
+            continue
+        if e in skip_exact:
+            continue
+        # New: skip if contains parentheses
+        if '(' in e or ')' in e:
+            continue
+        # New: skip if contains family relation word
+        if family_re.search(e):
+            continue
+        # New: skip if contains role indicator
+        if "'s" in e and role_re.search(e):
+            continue
+        # Existing substring skip (keep)
+        e_lower = e.lower()
+        if any(s.lower() in e_lower for s in skip_substrings):
+            continue
+        result.append(e)
+    return result
 # LOCATION
 def _clean_loc(entries: list[str]) -> list[str]:
     skip_substrings = [

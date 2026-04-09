@@ -126,4 +126,3 @@ def crawl_all(categories: dict[str, list[str]], delay: float=DELAY) -> dict[str,
     logger.info(f"Raw crawl saved to {out_path}")
 
     return final
-
