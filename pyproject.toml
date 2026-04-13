@@ -5,6 +5,7 @@ requires-python = ">=3.11"
 dependencies = [
     "requests",
     "beautifulsoup4",
+    "spacy>=3.8.14",
 ]
 
 [build-system]

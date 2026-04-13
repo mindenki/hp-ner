@@ -22,7 +22,15 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 
-ENTITY_TYPES = ["character", "location", "organization", "spell", "creature", "artifact"]
+LABEL_MAP = {
+    "character": "CHAR",
+    "location": "LOC",
+    "organization": "ORG",
+    "spell": "SPELL",
+    "creature": "CREA",
+    "artifact": "ARTI",
+}
+
 
 
 @dataclass
@@ -51,8 +59,8 @@ class EntityDictionary:
     def _load_dicts(self) -> None:
         """Loads the entity dictionaries from the txt files for all entity types."""
         total = 0
-        total_loaded = len(ENTITY_TYPES)
-        for entity_type in ENTITY_TYPES:
+        total_loaded = len(LABEL_MAP)
+        for entity_type in LABEL_MAP.keys():
             path = os.path.join(self.dict_dir, f"{entity_type}.txt")
             if not os.path.exists(path):
                 logger.warning(f"Dictionary file for {entity_type} not found at {path}. Skipping.")
@@ -105,7 +113,7 @@ class EntityDictionary:
                     if j - i > best_len:
                         best_match = DictMatch(
                             entity_type=entity_type,
-                            canonical=canonical,
+                            canonical_name=canonical,
                             start=i,
                             end=j,
                         )
@@ -118,13 +126,13 @@ class EntityDictionary:
                 i += 1
         return matches
     
-def matches_to_bio(self, words: list[str], matches: list[DictMatch]) -> list[str]:
+def matches_to_bio(words: list[str], matches: list[DictMatch]) -> list[str]:
     """Converts the matches to BIO format labels for each words in the input text."""
     labels = ["O"] * len(words)
     for match in matches:
-        labels[match.start] = f"B-{match.entity_type.upper()}"
+        labels[match.start] = f"B-{LABEL_MAP[match.entity_type]}"
         for i in range(match.start + 1, match.end):
-            labels[i] = f"I-{match.entity_type.upper()}"
+            labels[i] = f"I-{LABEL_MAP[match.entity_type]}"
     return labels
        
                     
