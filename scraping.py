@@ -27,7 +27,9 @@ class WikiScraper:
             logger.info(f"Visiting: {url}")
             return response.text #return raw HTML text
         else:
-            logger.error('page returns error')
+            logger.error(f'Page returned error {response.status_code} for {url}')
+            logger.error(f'Response headers: {dict(response.headers)}')
+            logger.error(f'Response body preview: {response.text[:500]}')
             return None
             
         
@@ -70,7 +72,7 @@ class WikiScraper:
         to_find = ['p', 'h2', 'h3']  #find paragraphs and titles
         tags = parsed_text.find_all(to_find)
         for t in tags:
-            output['paragraphs'].append(t.get_text(strip=True)) #append paragraphs and titles to the dictionary
+            output['paragraphs'].append(t.get_text(separator = " ", strip=True)) #append paragraphs and titles to the dictionary
         
         return output #we created a dictionary with url, title and the list of paragraphs
     
