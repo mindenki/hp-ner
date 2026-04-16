@@ -73,7 +73,10 @@ def clean_record(record):
 
 
 def clean_dataset(input_path, output_path):
-    records = load_jsonl(input_path)
+    try:
+        records = load_jsonl(input_path)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Input file not found te kis csacsi. Define correct input path (current input path: '{input_path}')") 
 
     cleaned = []
     dropped = []
