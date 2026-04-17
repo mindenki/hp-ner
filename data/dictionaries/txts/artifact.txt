@@ -48,13 +48,9 @@ Sybill Trelawney's cracked crystal ball
 Antidote to garish pink blended poison
 Borgin & Burkes's bewitched bowler hat
 Grim Fawley's memo to Harry Potter (I)
-Hungarian Horntail in the Cursed Vault
 Magical Exposure Threat Level measurer
 Magical Moustache Miracle Stubble Grow
 Mixture of powdered silver and dittany
-Portrait of a female etiquette teacher
-Portrait of a witch flying to the moon
-Portrait of a wizard with a broomstick
 Wilfred Levi Kidd's Wizard's Chess set
 Antoine Grimalkin's cursed gramophone
 Bewitched book owned by witch in Bath
@@ -70,9 +66,7 @@ Jacob's sibling's oak holiday wreath
 Jacob's sibling's oak tree snowglobe
 Jacob's sibling's painting of Fawkes
 Lunascope found in the Artefact Room
-Portrait of a man on a flying carpet
 Seamus Finnigan's Wizard's Chess set
-Unidentified Gryffindor Chaser (III)
 Unidentified Quidditch player's wand
 Winifred Haywood's Weightless Potion
 Bewitched gold and diamond necklace
@@ -86,11 +80,8 @@ Garrick Ollivander's misfiring wand
 Hepzibah Smith's goblin-made armour
 MACUSA USA Spell Contraventions map
 Murphy McNully's Wizard's chess set
-Portrait of a skeleton in a top hat
 Rolanda Hooch's second Silver Arrow
 Ronald Weasley's Wizard's Chess set
-Unidentified Gryffindor Chaser (II)
-Unidentified Headmaster with scroll
 EaziKleen Self-Propelling Scourers
 Gellert Grindelwald's dark banners
 Gellert Grindelwald's skull-hookah
@@ -101,8 +92,6 @@ Painting of sinister-looking monks
 Penny Haywood's Wizard's Chess set
 Rolanda Hooch's first Silver Arrow
 The Invisible Book of Invisibility
-Unidentified Gryffindor Chaser (I)
-Unidentified Gryffindor Headmaster
 Antidote to the Mysterious Malady
 Gimlet-eyed Hogwarts Headmistress
 Harry Potter's Wizard's Chess set
@@ -115,7 +104,6 @@ Painting of an Antipodean Opaleye
 Rowan Khanna's Wizard's chess set
 Rubeus Hagrid's moleskin overcoat
 Silvanus Kettleburn's prosthetics
-Unidentified Gryffindor man (III)
 Caxambu Style Borborygmus Potion
 Gentleman's-tooth-pearling-paste
 Grim Fawley's memo to Accounting
@@ -123,8 +111,6 @@ Hogwarts House animal-topped hat
 Jacob's sibling's suit of armour
 Mysterious Midnight Moon Madness
 Peruvian Instant Darkness Powder
-Unidentified Gryffindor man (II)
-Unidentified Gryffindor man (IV)
 Unidentified goblin-forged sword
 Eternally spotless handkerchief
 Hufflepuff common room painting
@@ -138,7 +124,6 @@ Ollivander family heirloom wand
 Painting of a vase with flowers
 Portrait of a witch in a meadow
 Ronald Weasley's wireless radio
-Rubens Winikus and Company Inc.
 Staircases with vanishing steps
 Unidentified resting Headmaster
 Unidentified shoe-eating liquid
@@ -178,9 +163,7 @@ Portrait of a mother and baby
 Portrait of a sleeping hermit
 Portrait of a wizard in black
 Quidditch strategy blackboard
-Skeleton Key (Victor Gridley)
-Unidentified Slytherin knight
-Unidentified red-haired witch
+Skeleton Key
 Weasleys' Dragon Roasted Nuts
 Weasleys' Wildfire Whiz-bangs
 A Young Professor McGonagall
@@ -200,23 +183,13 @@ Jacob's sibling's first wand
 L. Wakefield's Broomcare Wax
 Makeshift Hedgemaker Sunrise
 Mandrake Restorative Draught
-Nicholas de Mimsy-Porpington
->Nearly Dusted Nick
->Nearly Headless Nick
->Nick
->Sir Nicholas
->Sir Nick
 Painting of bewigged witches
 Penelope's Purple Pussy Cats
 Place Cachée Jazz Band wagon
-Portrait of a witch in green
-Portrait of a wizard in blue
 Screaming Snakes Hair Potion
 Self-Shuffling playing cards
 Shimmering Silver Salt Drops
 The Monster Book of Monsters
-Unidentified Gryffindor lady
-Unidentified Hufflepuff lady
 Walls pretending to be doors
 William Weasley's cursed hat
 Aberforth Dumbledore's wand
@@ -241,7 +214,6 @@ Out to Lunch Fake Moustache
 Peony Aperture's camera bag
 Percival Shacklehorn's tent
 Porpentina Goldstein's wand
-Portrait of a wizard in red
 Ptolemy (potion ingredient)
 Rose Granger-Weasley's wand
 Salazar Slytherin's compass
@@ -249,8 +221,6 @@ Seamus's Shrinking Solution
 Self-Propelling Custard Pie
 Smith & Co. Tick Tock Clock
 Strong Invigoration Draught
-Unidentified Ravenclaw lady
-Unidentified peppery potion
 Winifred Haywood's cauldron
 Wizengamot Accusation Chair
 Xenophilius Lovegood's wand
@@ -317,13 +287,10 @@ Luna Scamander's suitcase
 Mimbulus Mimbletonia Boil
 Miserable Female Gargoyle
 Mundungus Fletcher's wand
-Portrait of a mad old man
-Portrait of wailing women
 Powdered root of asphodel
 Repurposed Dark Detectors
 Tonic for Trace Detection
 Walburga Black's portrait
-Abraham Leslie McCracken
 Alistair's Golden Snitch
 Antipodean Opaleye scale
 Arn's Goblin-Made Helmet
@@ -339,7 +306,6 @@ Detachable Cribbing Cuff
 Enchanted Japanese Maple
 Enchanted wrapping paper
 Exploding Ginger Eyelash
-Ferdinand Octavius Pratt
 Florence Finnigan's wand
 Frolicsome Feline plates
 Gringotts Wizarding Bank
@@ -401,7 +367,6 @@ Portrait of a Wild Boar
 Portrait of the Healers
 Potent Exstimulo Potion
 Potion of All Potential
-Prentiss Pagett-Goggins
 Rudimentary body potion
 Rudolph Spielman's wand
 Rufus Scrimgeour's wand
@@ -454,7 +419,6 @@ Narcissa Malfoy's wand
 Peeves's self-portrait
 Percival Graves's wand
 Perpetual Cloud potion
-Phineas Nigellus Black
 Phoenix-embossed books
 Pius Thicknesse's wand
 Pointed purple crystal
@@ -487,12 +451,10 @@ Wizard's Sculpting Gel
 Anti-Paralysis Potion
 Arthur Weasley's wand
 Beautification Potion
-Bexelinda Bornswallow
 Bouncing Spider Juice
 Bursting Mushroom Cap
 Calamity Incident Map
 Cavalier (broomstick)
-Chelidonium Miniscula
 Chinese Fireball claw
 Cloak of Invisibility
 >Invisibility Cloak
@@ -502,13 +464,11 @@ Disillusionment Chest
 Draught of Perception
 Enchanted Zonko's box
 Enchanted heated rock
-Etheldreda Bloodworth
 Everlasting Eyelashes
 Expelliarmus Gargoyle
 Explosive Enterprises
 Fire-Breathing Potion
 Flitterbloom Tentacle
-Fytherley Undercliffe
 George Weasley's wand
 Giant chess mechanism
 Goblet of Fire casket
@@ -525,6 +485,7 @@ Leta Lestrange's wand
 Lottie Turner's brush
 Luna Lovegood's wands
 Lunettes Réveillantes
+>Waking Glasses
 MACUSA revolving door
 Mackled Malaclaw tail
 Magical insect cocoon
@@ -555,7 +516,6 @@ Amycus Carrow's wand
 Ancient Potion Maker
 Ancient purple robes
 Anti-Muggle doorknob
-Antonia Creaseworthy
 Befuddlement Draught
 Billywig sting slime
 Boris the Bewildered
@@ -577,7 +537,6 @@ Extract of Gurdyroot
 Fambus Station Wagon
 Flabberghasted leech
 Forgetfulness Potion
-Giffard Abbott's dog
 Goblin-made ironwork
 Gobstone Workstation
 Gregory Goyle's wand
@@ -591,7 +550,6 @@ Infusion of wormwood
 Invigoration Draught
 Invisibility Booster
 Jarvey Calming Tonic
-Leopoldina Smethwyck
 Lonely Male Gargoyle
 Lost Golden Snitches
 Love Potion Antidote
@@ -606,7 +564,6 @@ Nigel Wolpert's wand
 P-45 model aeroplane
 Parvati Patil's wand
 Percy Weasley's wand
-Poderick Cruickshank
 Pomfrey's Pick-Me-Up
 Pomona Sprout's wand
 Poppy Pomfrey's wand
@@ -622,11 +579,10 @@ Rolanda Hooch's wand
 Rowland Oakes's wand
 Rubeus Hagrid's wand
 Self-repairing robes
-Serpent (instrument)
+Serpent
 Sidley Smirk Platter
 Spell-Checking Quill
 Spider-like tweezers
-Squire (Middle Ages)
 Stormrider Firestorm
 Super Wizard Cracker
 T. M. Riddle's Diary
@@ -642,9 +598,7 @@ Anti-Cheating Quill
 Bright green liquid
 Butterfly Weed Balm
 Calamity Predictors
-Cassandra Trelawney
 Celestia Contemplor
-Chizpurfle carapace
 Cosme Acajor's wand
 Curious Travel Tote
 Cursed crystal ball
@@ -657,12 +611,10 @@ Enchanted Staircase
 Enchanted music box
 Essence of Insanity
 Everlasting Elixirs
-Fergus Fungal Budge
 Fireproof balaclava
 Fireproof underwear
 Football of Boredom
 Fred Weasley's wand
-George von Rheticus
 Gringotts vault key
 Hair-Raising Potion
 Harry Potter's wand
@@ -672,8 +624,6 @@ Isodora Rose's wand
 Jobberknoll feather
 Lacets auto-fixants
 Mahoutokoro uniform
-Margaretta Ironbark
->Marge
 McTawny Broomsticks
 Model of a Firebolt
 Moth-activated door
@@ -682,7 +632,6 @@ Old Man in Portrait
 Ominis Gaunt's wand
 Painting of a tiger
 Philosopher's Stone
-Poderick Crookshank
 Portkey Portmanteau
 Potter Stinks badge
 Powdered Poison Ivy
@@ -690,7 +639,6 @@ Pranktastic Present
 Pritcher's Porritch
 Quill of Acceptance
 Regeneration potion
-Reginald Heartachus
 Replenishing Potion
 Richly purple drink
 Self-Correcting Ink
@@ -703,8 +651,6 @@ Sword of Gryffindor
 Tempest in a Bottle
 Thick golden potion
 Three Sisters Bells
-Tobias Misslethorpe
-Urquhart Rackharrow
 Vinda Rosier's wand
 Weasley's Snowstorm
 Weather in a Bottle
@@ -712,13 +658,10 @@ Wheel of Nightmares
 Woodlice Extract 63
 Aesop Sharp's wand
 African Red Pepper
-Alphonso Ringbloom
 Anton Vogel's wand
 Astronomical Clock
-Basil Aurelius III
 Blind-worm's Sting
 Book of Admittance
-Brian Gagwilde III
 Bright blue liquid
 Bubble Bow Booster
 Bundimun Secretion
@@ -734,7 +677,6 @@ Deco Iron Cauldron
 Dragon-hide gloves
 Drowsiness Draught
 Eagle door knocker
-Edessa Sakndenberg
 Eleazar Fig's wand
 Essence of Dittany
 Essence of anchovy
@@ -753,7 +695,6 @@ Germinating Potion
 Goblin-made goblet
 Gramophone of Doom
 Hair-Dyeing Potion
-Heliotrope Wilkins
 Hogwarts telescope
 Invisibility Cloak
 Invisibility Token
@@ -765,7 +706,6 @@ Ludwigia inclinata
 Magick Moste Evile
 Malevolent Mixture
 Mallowsweet Branch
-Mirabella Plunkett
 Mopsus (antiquity)
 Natsai Onai's wand
 Navel Fluff Buster
@@ -786,7 +726,6 @@ Sandstone Gargoyle
 Self-Writing Quill
 Self-ironing robes
 Self-spelling wand
-Seraphina Picquery
 Shrinking Solution
 Sliced caterpillar
 Slytherin's Locket
@@ -805,12 +744,9 @@ The Hogwarts Diary
 Transylvanian Barb
 Twilight Moonbeams
 Venomous Tentacula
-Vindictus Viridian
-Wendelin the Weird
 Acromantula venom
 Anti Gravity Hats
 Anti-jinx varnish
-Ariana Dumbledore
 Artefact taxonomy
 Asian Dragon Hair
 Auto-Answer Quill
@@ -822,19 +758,15 @@ Bewitched tea set
 Blood-red Blossom
 Book with No Name
 Brain tank potion
-Brutus Scrimgeour
 Bursting mushroom
 Carmen's Solution
-Cecilia Gallerani
 Cleansweep Eleven
 Colour-Change Ink
 Contortion Potion
 Cottismore Croyne
-Damara Dodderidge
 De-gnoming gloves
 Death-Cap Draught
 Deflating Draught
-Derwent Shimpling
 Dizziness Draught
 Dragon Skin Boots
 Dragon of Duality
@@ -842,15 +774,12 @@ Décor Mystery Box
 Eagle owl feather
 Enchanted Ceiling
 Exploding pumpkin
-Ferdinand da Gama
 Flobberworm Mucus
 >Flobber Mucus
 Flobberworm heart
 Flobberworm teeth
 Flooboost regular
 Girl with Flowers
-Godric Gryffindor
-Gomas Barbadensis
 Gryffindor Knight
 Hair care potions
 Hermit crab shell
@@ -858,7 +787,6 @@ Hogwarts Pensieve
 Hogwarts Tapestry
 Inflatable Tongue
 Ink-Shroud Potion
-Isidora Morganach
 Katie Bell's wand
 Lavender Borealis
 Leaping Toadstool
@@ -873,14 +801,10 @@ Never-tangle wool
 No-Maj broomstick
 Pensieve Guardian
 Pensieve Sentinel
-Phineas St Gruber
 Pomegranate juice
 Portrait of a dog
 Protective gloves
-Quirinus Quirrell
 Rainbow Bath Taps
-Salazar Slytherin
->Serpent-tongue
 Self-Inking Quill
 Self-Playing Harp
 Shouting Schedule
@@ -898,7 +822,6 @@ Syrup of Asphodel
 The Inflated Girl
 The Old Librarian
 Thestral Thrasher
-Timothy the Timid
 Toast of Insanity
 Toe-biting kettle
 Ton-Tongue Toffee
@@ -907,7 +830,6 @@ Vanishing Cabinet
 Weasley Authentic
 Weightless Potion
 Wiggenweld Potion
-William de Cognac
 Witch in portrait
 Wizard's Checkers
 Yusuf Kama's wand
@@ -916,7 +838,6 @@ Abernathy's wand
 African Sea Salt
 Alihotsy Draught
 Altheda's potion
-Aspen (portrait)
 Bai Howin's wand
 Balloon Carriage
 Baneberry Potion
@@ -929,7 +850,6 @@ Box of Fireworks
 Boxing telescope
 Cauldron monster
 Challenge Shield
-Charles Rookwood
 Cho Chang's wand
 Clabbert pustule
 Cleansweep Seven
@@ -941,7 +861,6 @@ Dale Family Tomb
 De-ageing amulet
 Death Eater Mask
 Demiguise Statue
-Dexter Fortescue
 Disappearing Ink
 Dogbreath Potion
 Dragon Claw Ooze
@@ -951,7 +870,6 @@ Dragonfly thorax
 Draught of Peace
 Edible Dark Mark
 Edible Excrement
-Eldritch Diggory
 Enchanted mirror
 Enchanted window
 Everchanging Ink
@@ -976,21 +894,14 @@ Gringotts knight
 Grit of alleyway
 Happy Bubble Box
 Haywood Cauldron
-Heath Heatherton
-Helena Ravenclaw
->Grey Lady
-Helga Hufflepuff
 Helmet of Urtkot
-Henry Bumblepuft
 Herbicide Potion
-Hesphaestus Gore
 Hogwarts Express
 Hopping cauldron
 House-Elf Armour
 Hufflepuff's Cup
 Infinity Toaster
 Jet black candle
-Laura (portrait)
 Levitation socks
 Lou Ferme's wand
 Luminous pumpkin
@@ -1002,19 +913,11 @@ Milk of magnesia
 Mirror of Erised
 Muffling Draught
 Murtlap tentacle
-Newton Scamander
->Newt
->Theseus Scamander
->family
-Niamh Fitzgerald
 Nosebleed Nougat
 Nº. AO53q Potion
-Oraclitus Spheer
 Peace Disturbers
-Percival Rackham
 Perfect medicine
 Peter (portrait)
-Podric Batworthy
 Poisonous candle
 Polyjuice Potion
 Portkey-sickness
@@ -1025,16 +928,13 @@ Pumpkin Face Box
 Quidditch gloves
 Quidditch helmet
 Quodpot solution
-Reginald Oddpick
 Rejuicing Potion
 Repeating Rabbit
 Reusable Hangman
-Rowena Ravenclaw
 Rubby O' Chicken
 Salamander blood
 Salamander slime
 Screaming Potion
-Selina Sapworthy
 Shell instrument
 Skiving Snackbox
 Sleeping Draught
@@ -1043,14 +943,12 @@ Sopophorous Bean
 Sorcerous Gloves
 Star Grass Salve
 Staring Portrait
-Temeritus Shanks
 The Haunted Deck
 The swashbuckler
 Vervain infusion
 Volubilis Potion
 Wampus cat tears
 Weasley Joke Box
-Wilhemina Twigge
 Witch's Ganglion
 Wolfsbane Potion
 Wormwood Essence
@@ -1062,7 +960,6 @@ Bolt of Destiny
 Bombtastic Bomb
 Book of Potions
 Box 'O' Rockets
-Bridget Wenlock
 Broom Broom kit
 Bruisewort Balm
 Bulbadox powder
@@ -1083,8 +980,6 @@ Dark Mark Token
 Decoy Detonator
 Dragon Pox cure
 Durmstrang Ship
-Edgar Stroulger
-Elizabeth Burke
 Employee-B-Gone
 Enchanted Chalk
 Enchanted bench
@@ -1103,15 +998,11 @@ Football (ball)
 Founder statues
 Frog Spawn Soap
 Fwooper feather
-Glanmore Peakes
-Glen (portrait)
 Goblin Artefact
 Golden Balloons
 Gorgon Portrait
 Gossamer's pony
 Grand Staircase
-Greta Catchlove
->Gerda Curd
 Handler's Glove
 Haunted pumpkin
 Herbologist Orb
@@ -1120,7 +1011,6 @@ Jack-in-the-box
 Laughing Potion
 Laxative Potion
 Leprechaun gold
-Libatius Borage
 Magic Storybook
 Mandrake Elixir
 Marble Gargoyle
@@ -1133,7 +1023,6 @@ Mysterious girl
 New Look Mirror
 Niffler's Fancy
 Palmistry Model
-Paul (portrait)
 Peacock feather
 Pensieve Sentry
 Pepperup Elixir
@@ -1150,12 +1039,10 @@ Potion skimming
 Potter memorial
 Prophecy Record
 Puking Pastille
-Quentin Trimble
 Red flame algae
 Root of aconite
 Scale of Dragon
 Screaming Yo-yo
-Seraphina Bones
 Silver Cauldron
 Silver snuffbox
 Snargaluff seed
@@ -1167,11 +1054,9 @@ Stewed Mandrake
 Sticky Trainers
 Strength Potion
 Sum-solving ink
-Sylvia Pembroke
 Syrup of Arnica
 The Hopping Pot
 Thunderbolt VII
-Valeria Myriadd
 Voodoo Fountain
 Weakness Potion
 White chocolate
@@ -1181,9 +1066,7 @@ Winged catapult
 Wizard Skittles
 Yuletide Turner
 Activity Chest
-Ambrose Turner
 Armadillo bile
-Armando Dippet
 Bewitched mask
 Billywig sting
 Billywig wings
@@ -1192,19 +1075,16 @@ Book of Spells
 Boomslang skin
 Bountiful Brew
 Brass Cauldron
-Brian Gagwilde
 Bulbadox juice
 Bulgeye Potion
 Butterfly weed
 C. P. (wizard)
 Cadogan's wand
 Candy in a Can
-Cecil Shetland
 Centaur Armour
 Challenge Star
 Cherry (fruit)
 Chicken (food)
-Clara Thompson
 Cleansweep One
 Cleansweep Six
 Cleansweep Two
@@ -1223,9 +1103,7 @@ Dawdle Draught
 Dementor dummy
 Dogbane Potion
 Dragon brazier
-Dugald McPhail
 Dung Composter
-Edward Rabnott
 Elixir of Life
 Emerald Potion
 Enchanted book
@@ -1246,14 +1124,11 @@ Flying pumpkin
 Fred (Portkey)
 Garrotting Gas
 Giant Dungbomb
-Giffard Abbott
 Girding Potion
 Goblet of Fire
 Gringotts Mint
 Haunted mirror
 Healing Potion
-Hengist Rawkes
-Hesper Starkey
 Hiccough Sweet
 Hogwarts boats
 Horklump juice
@@ -1261,7 +1136,6 @@ Horn of Bicorn
 Jawbind Potion
 Jumbo Dungbomb
 Laughing skull
-Lethia Burbley
 Levioso statue
 Magical knight
 Man in a chair
@@ -1278,9 +1152,7 @@ Nº 515X Potion
 Octopus Powder
 Old Posh Baron
 Peppermint oil
-Percival Pratt
 Perkins's tent
-Phyllida Spore
 Poisoned apple
 Pompion Potion
 Porcupine Robe
@@ -1303,7 +1175,6 @@ Shouren's Tent
 Shrieking book
 Siberian Arrow
 Silvery liquid
-Simon Marchand
 Singing potion
 Skender's wand
 Slytherin Lock
@@ -1321,9 +1192,6 @@ Two-way mirror
 Vault portrait
 Vin de Gobelin
 Vin de la nuit
-Viola Frierson
-Vitamix Potion
-Walburga Black
 Wartcap powder
 Whizzing Worms
 Witches' Mummy
@@ -1335,7 +1203,6 @@ Ageing Potion
 Air Wave Gold
 Ashwinder egg
 Baby Cauldron
-Basil Fronsac
 Billywig Hive
 Biting kettle
 Blight-B-Gone
@@ -1352,12 +1219,9 @@ Dancing glass
 Dancing socks
 Dark Detector
 Deco Cauldron
-Dilys Derwent
 Dragon Poison
 Dugbog tongue
 Edurus Potion
-Elfrida Cragg
-Emeric Switch
 Erumpent horn
 Erumpent tail
 Felix Felicis
@@ -1391,7 +1255,6 @@ Magic lantern
 Magical chest
 Mandrake Root
 Mandrake leaf
-Maud Montague
 Maxima Potion
 Memory Potion
 Merlin's wand
@@ -1399,7 +1262,6 @@ Moody's Trunk
 Mopsus Potion
 Mosaic flower
 Moving Statue
-Muldoon Cragg
 Nux Myristica
 Oculus Potion
 Opal Necklace
@@ -1426,7 +1288,6 @@ Revive Potion
 Rogue Bludger
 Runespoor egg
 Scarab beetle
-Shane Golding
 Shield Gloves
 Shooting Star
 Shrinking key
@@ -1447,14 +1308,10 @@ Unicorn blood
 Unicorn tears
 Valerian root
 Vigorous Belt
-Walter Aragon
 Weasley Clock
 Wideye Potion
 Wisdom potion
 Adder's Fork
-Albert Stump
-Amrose Swott
->Ambrose Swott
 Angry wizard
 Aviatomobile
 Beast Feeder
@@ -1484,7 +1341,6 @@ Dragon blood
 Dragon liver
 Failed Stone
 Fanged Flyer
-Faris Spavin
 >Spout-hole
 Flitterbloom
 Focus Potion
@@ -1493,27 +1349,6 @@ Giant's Helm
 Google Stump
 Granian hair
 Griffin claw
-Grogan Stump
-Harry Potter
->Albert Runcorn
->Barny Weasley
->Cuthbert Binns
->Daily Prophet
->Dudley
->Gregory Goyle
->Lightning
->Neville Longbottom
->Peeves
->Perkins
->Plotter
->Polyjuice Potion
->Potterwatch
->Potty
->Slytherins
->Snatchers
->Stanley Shunpike
->Undesirable No. 1
->Vernon
 Headless Hat
 Hidden doors
 Iguana blood
@@ -1531,15 +1366,9 @@ Muggle Guard
 Muggle Magic
 Night Dancer
 Noisy Hitter
-Norvel Twonk
-Olin Oakwood
-Olivia Green
->Jacob
->Liv
 Ominous Mask
 Orange juice
 Pliant Pasta
-Podric Piles
 Potio Nimbus
 Potion N. 07
 Potions Lady
@@ -1551,7 +1380,6 @@ Shield Cloak
 Shrake spine
 Sight Unseen
 Silver Arrow
-Skylar Flame
 Smart Locker
 Solution 078
 Solution 125
@@ -1565,7 +1393,6 @@ Sunny Spells
 The Evil Eye
 Threat meter
 Tiny Twister
-Tobias Stump
 Troll Armour
 Troll bogeys
 Unicorn hair
@@ -1575,8 +1402,6 @@ Wand Weigher
 Watering can
 White spirit
 Wrist Guards
-Anne Boleyn
-Bertie Bott
 Bitter root
 Black Quill
 Box of Gems
@@ -1587,7 +1412,6 @@ Corn starch
 Crush Blush
 Curious Dew
 Cursed sock
-Dai Ryusaki
 Dark Scroll
 Death Light
 Deluminator
@@ -1655,7 +1479,6 @@ Starthistle
 Sugar Hexes
 Swoopstikes
 Tarot cards
-Thomas More
 Thunderbrew
 Time-Turner
 Tinderblast
@@ -1663,7 +1486,6 @@ Toe of Frog
 Trumbledore
 Truth Serum
 Unlucky Dip
-Uric Oapley
 Veritaserum
 Weasley Bag
 Weasley box
@@ -1746,21 +1568,9 @@ Spleenwart
 Star Grass
 Stormrider
 Swiftstick
-Tilly Toke
-Tom Riddle
->Chief Death Eater
->Dark Lord
->Death Eaters
->He-Who-Must-Not-Be-Named
->Heir of Slytherin
->Lee Jordan
->Lord Voldemort
->You-Know-Who
->wizarding community
 Trick wand
 Twigger 90
 Typewriter
-Ulick Gamp
 Weedosoros
 Wiggenbush
 Wiggentree
@@ -1802,7 +1612,6 @@ Gillyweed
 Gurdyroot
 Hellebore
 Iris Pius
-Jewelweed
 Knee Pads
 Knotgrass
 Liquorice
@@ -1823,7 +1632,6 @@ Raspberry
 Rat Tonic
 Saltpetre
 >Potassium nitrate
-San Bakar
 Scale Sap
 Skele-Gro
 Snakeweed
@@ -1951,7 +1759,6 @@ Charge
 Cheese
 Chrisp
 Cotton
-Daryle
 Elixir
 GRRRRR
 Garlic
@@ -1963,34 +1770,19 @@ Knight
 Legacy
 Lichen
 Lovage
-Mary I
->Bloody Mary
->Mary Tudor
-Merlin
->Prince of Enchanters
 Mirror
-Nagini
->Bathilda Bagshot
->placed in her body)
 Nettle
 Nutmeg
 Orrery
-Peeves
->Peevesy
->Peevsie
 Pickup
 Potion
 Sharon
 Silver
 Spider
 Squill
-Violet
->Vi
 Vulpus
 Blood
 C. V.
-Circe
->Circe of Aeaea
 Count
 D. L.
 Daisy
