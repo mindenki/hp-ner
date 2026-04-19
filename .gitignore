@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Outputs & saved artifacts
+outputs/
+
+# Scraped / generated data (large, use git lfs if committing)
+data/raw/
+data/cleaned/
+data/filtered/
+data/silver/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store

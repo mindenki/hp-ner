@@ -1,0 +1,46 @@
+[project]
+name = "hp-ner"
+version = "0.1.0"
+description = "Named Entity Recognition for the Harry Potter universe"
+requires-python = ">=3.11"
+
+dependencies = [
+    # Model + training
+    "torch>=2.2",
+    "transformers>=4.40",
+    "datasets>=2.19",
+    "seqeval>=1.2",
+    # Tokenizer backends
+    "sentencepiece>=0.2",
+    "protobuf>=4.0",
+    # Config + CLI
+    "pyyaml>=6.0",
+    # Data / utils
+    "numpy>=1.26",
+    # Scraping (phase1-hanna)
+    "requests>=2.31",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    # NLP / filtering (phase1-anis, phase1-zita)
+    "spacy>=3.8",
+    "pyunormalize>=15.0",
+]
+
+[project.scripts]
+train = "baseline.scripts.train:main"
+evaluate = "baseline.scripts.evaluate:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["baseline", "src"]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu128" }]
