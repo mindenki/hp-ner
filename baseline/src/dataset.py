@@ -1,63 +1,39 @@
-"""IOB2 reader and PyTorch Dataset for EWT NER.
+"""PyTorch Dataset for EWT NER.
 
-The EWT IOB2 format is 5-column tab-separated with comment lines (starting with #) and blank-line sentence boundaries:
+Reads EWT IOB2 files via the shared IOB2Reader (mode="ewt").
+EWT IOB2 format — 5-column tab-separated, comment lines start with #:
 
     # sent_id = ...
     1   Where   O       -   -
     6   Iguazu  B-LOC   -   stephen
     7   ?       O       -   -
-
-Only columns 2 (token) and 3 (label) are used.
 """
+
 import logging
-from dataclasses import dataclass
 from pathlib import Path
 
 import torch
 from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizerFast
 
+from src.preprocessing.iob2 import IOB2Reader, Sentence
+
 logger = logging.getLogger(__name__)
 
 IGNORED_LABEL_ID: int = -100
 
 
-@dataclass
-class Sentence:
-    words: list[str]
-    labels: list[str]
-
-
 def read_iob2(path: Path) -> list[Sentence]:
     """Read an EWT IOB2 file and return a list of Sentence objects."""
     logger.info(f"Reading IOB2 file: {path}")
-    sentences: list[Sentence] = []
-    current_words: list[str] = []
-    current_labels: list[str] = []
-
-    with path.open(encoding="utf-8") as fh:
-        for line in fh:
-            line = line.rstrip("\n")
-            if line.startswith("#"):
-                continue
-            if line == "": # Sentence boundary
-                if current_words:
-                    sentences.append(Sentence(words=current_words, labels=current_labels))
-                    current_words = []
-                    current_labels = []
-            else:
-                parts = line.split("\t")
-                current_words.append(parts[1])
-                current_labels.append(parts[2])
-
-    if current_words:
-        sentences.append(Sentence(words=current_words, labels=current_labels))
-
+    sentences = IOB2Reader(mode="ewt", validate=False).read(path)
     logger.info(f"Loaded {len(sentences)} sentences from {path.name}")
     return sentences
 
 
-def build_label_vocab(sentences: list[Sentence]) -> tuple[dict[str, int], dict[int, str]]:
+def build_label_vocab(
+    sentences: list[Sentence],
+) -> tuple[dict[str, int], dict[int, str]]:
     """Build label2id / id2label from training sentences.
 
     - "O" is always id 0
@@ -70,25 +46,35 @@ def build_label_vocab(sentences: list[Sentence]) -> tuple[dict[str, int], dict[i
     sorted_labels = ["O"] + sorted(_l for _l in unique_labels if _l != "O")
     label2id: dict[str, int] = {label: i for i, label in enumerate(sorted_labels)}
     id2label: dict[int, str] = {i: label for label, i in label2id.items()}
-    logger.info(f"Built label vocabulary: {len(label2id)} labels — {list(label2id.keys())}")
+    logger.info(
+        f"Built label vocabulary: {len(label2id)} labels — {list(label2id.keys())}"
+    )
     return label2id, id2label
 
 
 class NERDataset(Dataset):
     """PyTorch Dataset for token classification with subword label alignment."""
 
-    def __init__(self, sentences: list[Sentence], tokenizer: PreTrainedTokenizerFast, label2id: dict[str, int], max_length: int = 128) -> None:
+    def __init__(
+        self,
+        sentences: list[Sentence],
+        tokenizer: PreTrainedTokenizerFast,
+        label2id: dict[str, int],
+        max_length: int = 128,
+    ) -> None:
         self.sentences = sentences
         self._tokenizer = tokenizer
         self._label2id = label2id
-        self._max_length = max_length # Truncate long sentences to reduce memory usage
-        logger.info(f"Tokenizing and aligning labels for {len(sentences)} sentences ...")
+        self._max_length = max_length  # Truncate long sentences to reduce memory usage
+        logger.info(
+            f"Tokenizing and aligning labels for {len(sentences)} sentences ..."
+        )
         self._items = [self._tokenize_and_align(s) for s in self.sentences]
         logger.info(f"Dataset ready — {len(self._items)} samples")
 
     def _tokenize_and_align(self, sentence: Sentence) -> dict[str, torch.Tensor]:
         """Tokenize a sentence and align original token labels to subword tokens.
-        
+
         # Example sentence: ["Iguazu", "Falls", "are", "beautiful"]
         word_ids() example:
             position:  0      1     2     3    4        5      6           7
@@ -115,7 +101,9 @@ class NERDataset(Dataset):
             return_tensors="pt",
         )
 
-        word_ids = encoding.word_ids(batch_index=0) # batch_index=0 means the only sentence in this encoding
+        word_ids = encoding.word_ids(
+            batch_index=0
+        )  # batch_index=0 means the only sentence in this encoding
         aligned_labels: list[int] = []
         previous_word_id: int | None = None
 
@@ -146,17 +134,19 @@ class NERDataset(Dataset):
 
 def collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
     """Dynamically pad a batch of tokenized sentences and their aligned labels.
-    
+
     Argument in pad_sequence:
         - batch_first=True: DeBERTa (and all HuggingFace models) expect input as [batch_size, seq_len]
 
     Returns:
         A dict with keys "input_ids", "attention_mask", and "labels", where each value is a padded tensor of shape [batch_size, max_seq_len].
     """
-    logger.debug(f"Collating batch of {len(batch)} samples with varying sequence lengths ...")
+    logger.debug(
+        f"Collating batch of {len(batch)} samples with varying sequence lengths ..."
+    )
     input_ids = torch.nn.utils.rnn.pad_sequence(
         [item["input_ids"] for item in batch],
-        batch_first=True, # To have batch_size as the first dimension
+        batch_first=True,  # To have batch_size as the first dimension
         padding_value=0,
     )
     attention_mask = torch.nn.utils.rnn.pad_sequence(
@@ -169,5 +159,7 @@ def collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
         batch_first=True,
         padding_value=IGNORED_LABEL_ID,
     )
-    logger.debug(f"Batch collated — input_ids: {input_ids.shape}, attention_mask: {attention_mask.shape}, labels: {labels.shape}")
+    logger.debug(
+        f"Batch collated — input_ids: {input_ids.shape}, attention_mask: {attention_mask.shape}, labels: {labels.shape}"
+    )
     return {"input_ids": input_ids, "attention_mask": attention_mask, "labels": labels}
