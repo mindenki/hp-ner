@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 
 from src.dataset import NERDataset, collate_fn
 from src.model import DeBERTaNER
+from src.preprocessing.iob2 import IOB2Writer, Sentence
 
 logger = logging.getLogger(__name__)
 
@@ -87,14 +88,12 @@ class Evaluator:
             - Sentences are separated by blank lines.
         """
         logger.info(f"Writing predictions to: {output_path}")
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        lines: list[str] = []
-        for sentence, preds in zip(dataset.sentences, predictions):
-            for i, (word, label) in enumerate(zip(sentence.words, preds), start=1):
-                lines.append(f"{i}\t{word}\t{label}")
-            lines.append("")
-        output_path.write_text("\n".join(lines), encoding="utf-8")
-        logger.info(f"Predictions written — {len(dataset.sentences)} sentences")
+        pred_sentences = [
+            Sentence(s.words, preds)
+            for s, preds in zip(dataset.sentences, predictions)
+        ]
+        IOB2Writer(mode="ewt").write(pred_sentences, output_path)
+        logger.info(f"Predictions written — {len(pred_sentences)} sentences")
 
     def run_span_f1(self, gold_path: Path, pred_path: Path) -> None:
         """Call the course-provided span_f1.py if it exists at the project root."""
