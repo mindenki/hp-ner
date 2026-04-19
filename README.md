@@ -1,275 +1,357 @@
-# HP-NER: Full Project Plan
+# HP-NER: Named Entity Recognition for the Harry Potter Universe
 
-## Repository Layout
+Fine-tunes `microsoft/deberta-v3-base` on the English Web Treebank (EWT) as a course baseline, then builds a Harry Potter–specific NER corpus via wiki scraping, dictionary-guided silver labeling, and manual annotation — targeting six entity types: **CHARACTER, LOCATION, ORGANIZATION, CREATURE, SPELL, ARTIFACT**.
+
+---
+
+## Repository Structure
 
 ```
 hp-ner/
-├── pyproject.toml             # UV-managed dependencies
-├── README.md
-├── .python-version
-├── data/
-│   ├── raw/                   # Scraped HTML/text
-│   ├── filtered/              # Post-filtering sentences
-│   ├── annotated/             # IOB2 annotation files per annotator
-│   ├── merged/                # Adjudicated gold standard
-│   └── ewt/                   # EWT train/dev/test (IOB2)
+├── baseline/                        # EWT baseline (DeBERTa)
+│   ├── configs/baseline.yaml        # Hyperparameters and paths
+│   ├── scripts/
+│   │   ├── train.py                 # Training entrypoint
+│   │   └── evaluate.py              # Evaluation + span_f1.py runner
+│   └── src/
+│       ├── dataset.py               # IOB2 reader + PyTorch Dataset
+│       ├── model.py                 # DeBERTa token classification wrapper
+│       ├── trainer.py               # Training loop
+│       └── evaluator.py             # Inference + prediction writer
 ├── src/
-│   └── hp_ner/
-│       ├── __init__.py
-│       ├── scraping/
-│       │   ├── __init__.py
-│       │   ├── scraper.py         # WikiScraper class
-│       │   └── cleaner.py         # TextCleaner class
-│       ├── preprocessing/
-│       │   ├── __init__.py
-│       │   ├── sentence_filter.py # SentenceFilter class
-│       │   └── iob2.py            # IOB2Reader / IOB2Writer classes
-│       ├── annotation/
-│       │   ├── __init__.py
-│       │   └── agreement.py       # AgreementCalculator (Cohen's kappa)
-│       ├── models/
-│       │   ├── __init__.py
-│       │   ├── baseline.py        # BertNERBaseline class
-│       │   ├── enhanced.py        # EnhancedNER class (DAPT + CRF)
-│       │   └── llm_eval.py        # LLMEvaluator class (OpenAI/Anthropic API)
-│       ├── training/
-│       │   ├── __init__.py
-│       │   ├── trainer.py         # NERTrainer class
-│       │   └── dapt.py            # DomainAdaptivePretrainer class
-│       └── evaluation/
-│           ├── __init__.py
-│           ├── metrics.py         # MetricsCalculator class
-│           ├── ablation.py        # AblationStudy class
-│           ├── learning_curve.py  # LearningCurveAnalyzer class
-│           └── analysis.py        # QualitativeAnalyzer class
+│   ├── preprocessing/
+│   │   └── iob2.py                  # Shared IOB2Reader / IOB2Writer
+│   ├── scraping/
+│   │   ├── scraper.py               # WikiScraper (requests + BeautifulSoup4)
+│   │   └── cleaner.py               # Text cleaner + sentencizer
+│   ├── dict_builder/
+│   │   ├── categories.py            # HP Fandom category list
+│   │   ├── category_crawler.py      # Crawls wiki categories → canonical names
+│   │   ├── alias_extractor.py       # Scrapes infobox aliases per entity
+│   │   ├── category_cleaner.py      # Deduplication + casing normalization
+│   │   └── txt_writer.py            # Writes per-label .txt dict files
+│   └── silver_labeling/
+│       ├── entity_dict.py           # Greedy longest-match dictionary lookup
+│       ├── bert_tagger.py           # Loads baseline model, maps EWT→HP labels
+│       ├── merger.py                # Merges dict + BERT predictions
+│       ├── tokenizer.py             # spaCy tokenizer wrapper
+│       └── stats.py                 # Coverage / conflict statistics
 ├── scripts/
-│   ├── run_scrape.py
-│   ├── run_filter.py
-│   ├── run_agreement.py
-│   ├── run_train_baseline.py
-│   ├── run_train_enhanced.py
-│   ├── run_eval_llm.py
-│   └── run_analysis.py
-└── notebooks/                 # Exploratory / result visualization only
+│   ├── run_scrape.py                # Run WikiScraper → data/raw/
+│   ├── run_category_crawler.py      # Build canonical entity dictionary
+│   ├── run_alias_scraper.py         # Enrich dictionary with aliases
+│   ├── run_writer.py                # Write .txt dict files for silver labeling
+│   └── run_silver_label.py          # Run full silver labeling pipeline
+├── data/
+│   ├── en_ewt-ud-train.iob2         # EWT training set
+│   ├── en_ewt-ud-dev.iob2           # EWT dev set
+│   ├── en_ewt-ud-test-masked.iob2   # EWT test set (labels masked)
+│   ├── raw/                         # Scraped wiki .jsonl (git-ignored)
+│   ├── cleaned/                     # Cleaned sentences .jsonl (git-ignored)
+│   ├── filtered/                    # Filtered sentences (git-ignored)
+│   ├── dictionaries/                # hp_canonical.json, hp_aliases.json, txts/
+│   ├── silver/                      # Silver-labeled .jsonl (git-ignored)
+│   ├── annotated/                   # Per-annotator gold IOB2 files
+│   └── merged/                      # Adjudicated gold standard
+├── outputs/                         # Model checkpoints and predictions
+│   └── baseline/
+│       └── run_YYYYmmdd_HHMMSS/
+│           ├── best_model/          # Saved DeBERTa checkpoint (git-lfs)
+│           ├── predictions/         # dev.iob2, test.iob2
+│           ├── label2id.json
+│           └── training_history.json
+├── span_f1.py                       # Course-provided evaluation script
+└── pyproject.toml                   # UV-managed dependencies
 ```
 
 ---
 
-## Phase 1 — Data Collection
+## Prerequisites
 
-**`scraping/scraper.py` → `WikiScraper`**
-- Input: seed URLs (Harry Potter Fandom wiki categories)
-- Uses `requests` + `BeautifulSoup4`; respects `robots.txt`
-- Recursively follows internal links up to configurable depth
-- Outputs: raw `.jsonl` with `{url, title, paragraphs[]}`
+- **Python >= 3.11**
+- **[uv](https://docs.astral.sh/uv/)** — fast Python package manager
+- **[git-lfs](https://git-lfs.com/)** — required to download saved model weights
 
-**`scraping/cleaner.py` → `TextCleaner`**
-- Strips wiki markup artifacts, citation brackets `[1]`, infobox text
-- Unicode normalization (NFC)
+### Install uv
 
-**`preprocessing/sentence_filter.py` → `SentenceFilter`**
-
-Filtering criteria to implement:
-- Min tokens: 5, Max tokens: 60 (configurable)
-- Drop sentences with >40% numeric tokens
-- Drop sentences with unbalanced parentheses
-- Drop if detected language ≠ English (via `langdetect`)
-- MinHash deduplication (Jaccard threshold 0.8) via `datasketch`
-
----
-
-## Phase 2 — Annotation
-
-**Format:** IOB2, one token per line, space-separated: `token label`
-
-**Entity types:**
-| Tag | Description |
-|---|---|
-| `CHARACTER` | Named persons (Harry Potter, Dumbledore) |
-| `LOCATION` | Places (Hogwarts, Diagon Alley) |
-| `ORGANIZATION` | Groups/institutions (Ministry of Magic, Order of the Phoenix) |
-| `CREATURE` | Non-human beings (Dementor, Hippogriff) |
-| `SPELL` | Incantations (Expelliarmus, Avada Kedavra) |
-| `ARTIFACT` | Objects with narrative significance (Horcrux, Marauder's Map) |
-
-**Overlap strategy:**
-- Assign 85% of sentences uniquely per annotator
-- 15% shared across all annotators → IAA calculation
-
-**`annotation/agreement.py` → `AgreementCalculator`**
-- Converts IOB2 spans to (start, end, label) tuples
-- Computes token-level and span-level Cohen's κ
-- Reports per-class κ breakdown
-- Target: κ ≥ 0.7 before merging
-
----
-
-## Phase 3 — Baseline Model
-
-**`models/baseline.py` → `BertNERBaseline`**
-
-```
-Recommended model: dslim/bert-base-NER
-Alternatives (stronger):
-  - dbmdz/bert-large-cased-finetuned-conll03-english
-  - Jean-Baptiste/roberta-large-ner-english
-  - microsoft/deberta-v3-base  ← recommended upgrade
-  - studio-ousia/luke-base     ← entity-aware, best for NER
+**macOS / Linux**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-- Load via `transformers.AutoModelForTokenClassification`
-- Replace classification head to match HP label set
-- Fine-tune on annotated HP train split + EWT train split
-- Evaluate on HP dev / EWT dev
-- Save best checkpoint by span-F1
-
-**`training/trainer.py` → `NERTrainer`**
-- Wraps HuggingFace `Trainer` with custom `DataCollatorForTokenClassification`
-- Handles subword-to-word label alignment
-- Early stopping on dev span-F1 (patience=3)
-
----
-
-## Phase 4 — Enhanced Model
-
-### Enhancement A: Domain-Adaptive Pretraining (DAPT)
-
-**`training/dapt.py` → `DomainAdaptivePretrainer`**
-- Continue MLM on scraped HP corpus (before fine-tuning)
-- Uses `DataCollatorForLanguageModeling` (mlm_probability=0.15)
-- Run for ~3 epochs on HP corpus
-- Save adapted checkpoint → used as init for fine-tuning
-
-### Enhancement B: CRF Decoding Layer
-
-**`models/enhanced.py` → `EnhancedNER`**
-- Replaces softmax head with linear-chain CRF (`torchcrf`)
-- Encodes valid IOB2 transitions as hard constraints in transition matrix
-- Otherwise same training loop as baseline
-
-**Stack both:** DAPT init → fine-tune with CRF head = full enhanced model.
-
----
-
-## Phase 5 — LLM Evaluation
-
-**`models/llm_eval.py` → `LLMEvaluator`**
-- Zero-shot prompt per sentence to GPT-4o or Claude via API
-- System prompt defines all 6 entity types with examples
-- Parses JSON response `{entities: [{text, label, start, end}]}`
-- Converts to IOB2 for unified evaluation
-- Rate-limited with exponential backoff
-
-Prompt template:
-```
-You are a Named Entity Recognition system for the Harry Potter universe.
-Identify all named entities in the sentence below.
-Entity types: CHARACTER, LOCATION, ORGANIZATION, CREATURE, SPELL, ARTIFACT.
-Return ONLY valid JSON: {"entities": [{"text": "...", "label": "...", "start": N, "end": N}]}
-
-Sentence: {sentence}
+**Windows (PowerShell)**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
----
+### Install git-lfs
 
-## Phase 6 — Evaluation & Analysis
+**macOS**
+```bash
+brew install git-lfs
+```
 
-### Metrics (`evaluation/metrics.py` → `MetricsCalculator`)
+**Linux**
+```bash
+sudo apt install git-lfs   # Debian/Ubuntu
+sudo dnf install git-lfs   # Fedora
+```
 
-| Metric | Implementation |
-|---|---|
-| Span-level P/R/F1 | `seqeval` library |
-| Per-class F1 | `seqeval` with `scheme=IOB2` |
-| Partial match (boundary correct, label wrong) | Custom: compare span boundaries independently of label |
-| Exact span accuracy | Custom: strict (start, end, label) match |
-| Majority-class baseline | Always predict most frequent entity token |
-
-### Ablation Study (`evaluation/ablation.py` → `AblationStudy`)
-
-Run in order, each as separate experiment:
-1. BERT (no fine-tuning) → majority class F1
-2. BERT fine-tuned on EWT only
-3. BERT fine-tuned on HP annotated only
-4. BERT fine-tuned on EWT + HP
-5. DAPT → fine-tune on EWT + HP
-6. DAPT → fine-tune with CRF on EWT + HP (= full enhanced)
-7. LLM zero-shot
-8. LLM few-shot (5 examples in prompt)
-
-### Learning Curve (`evaluation/learning_curve.py` → `LearningCurveAnalyzer`)
-- Train on [10%, 20%, 40%, 60%, 80%, 100%] of HP annotated train
-- Plot dev F1 vs. train size for baseline and enhanced model
-
-### Qualitative Analysis (`evaluation/analysis.py` → `QualitativeAnalyzer`)
-- Confusion matrix across entity types
-- Error bucketing: missed entities / wrong label / boundary off / spurious
-- Per-sentence difficulty scoring (entity density, sentence length)
-
-### Feature / Input Importance
-- Integrated Gradients via `captum` library on baseline model
-- Token attribution for FP and FN examples
-- Report top-10 tokens per entity type that drive predictions
+**Windows** — download the installer from [git-lfs.com](https://git-lfs.com/).
 
 ---
 
-## pyproject.toml (UV)
+## Setup
 
-```toml
-[project]
-name = "hp-ner"
-version = "0.1.0"
-requires-python = ">=3.11"
-dependencies = [
-  "transformers>=4.40",
-  "datasets>=2.19",
-  "torch>=2.2",
-  "torchcrf>=1.1",
-  "seqeval>=1.2",
-  "scikit-learn>=1.4",
-  "beautifulsoup4>=4.12",
-  "requests>=2.31",
-  "langdetect>=1.0",
-  "datasketch>=1.6",
-  "openai>=1.23",
-  "anthropic>=0.25",
-  "captum>=0.7",
-  "pydantic>=2.7",
-  "rich>=13.7",
-  "typer>=0.12",
-]
+### 1. Clone with LFS
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+If you want the pre-trained model weights included, pull LFS objects after cloning:
+
+```bash
+git clone https://github.com/mindenki/hp-ner.git
+cd hp-ner
+git lfs pull
+```
+
+> **Skip LFS:** If you only want the code and intend to train from scratch, a plain `git clone` is enough — LFS objects are downloaded on demand only when you run `git lfs pull`.
+
+### 2. Install dependencies
+
+```bash
+uv sync
+```
+
+This creates `.venv/` and installs all pinned dependencies.
+
+> **GPU:** PyTorch is resolved from the CUDA 12.8 index by default. On a CPU-only machine you can override:
+> ```bash
+> uv pip install --python .venv/bin/python \
+>   --index-url https://download.pytorch.org/whl/cpu \
+>   --force-reinstall torch
+> ```
+
+### 3. Activate the virtual environment
+
+```bash
+source .venv/bin/activate   # macOS / Linux
+.venv\Scripts\activate      # Windows
+```
+
+Or prefix every command with `uv run` to skip activation entirely.
+
+---
+
+## EWT Baseline
+
+Fine-tunes DeBERTa-v3-base on EWT for standard NER (PER / LOC / ORG). This is the course submission and the zero-shot starting point for HP experiments.
+
+### Train
+
+```bash
+uv run train
+# or
+python baseline/scripts/train.py
+```
+
+Pass `--config path/to.yaml` to override `baseline/configs/baseline.yaml`.
+
+**What it does:**
+- Fine-tunes on EWT train, evaluates on EWT dev after each epoch (seqeval micro-F1)
+- Saves each run to `outputs/baseline/run_YYYYmmdd_HHMMSS/`
+- Saves best checkpoint (by dev F1) to `run_.../best_model/`
+- Updates `outputs/baseline/LATEST_RUN.txt`
+
+### Evaluate
+
+```bash
+# Dev set (runs span_f1.py automatically if present)
+uv run evaluate --split dev
+
+# Specific run
+uv run evaluate --split dev --run run_YYYYmmdd_HHMMSS
+
+# Test set (labels masked — no F1 computed)
+uv run evaluate --split test
+```
+
+Predictions are written to `outputs/baseline/run_.../predictions/{split}.iob2`.
+
+### Configuration
+
+All settings in `baseline/configs/baseline.yaml`:
+
+| Parameter | Default | Description |
+|---|---|---|
+| `model.name` | `microsoft/deberta-v3-base` | HuggingFace model ID |
+| `model.max_length` | `128` | Max subword token length |
+| `training.num_epochs` | `1` | Fine-tuning epochs |
+| `training.learning_rate` | `5e-6` | AdamW learning rate |
+| `training.batch_size` | `16` | Training batch size |
+| `training.warmup_ratio` | `0.1` | Linear LR warmup fraction |
+| `training.weight_decay` | `0.01` | L2 regularization |
+| `training.device` | `cpu` | Set to `cuda` for GPU |
+| `training.seed` | `42` | Random seed |
+| `evaluation.batch_size` | `32` | Inference batch size |
+
+### Using the pre-trained checkpoint
+
+The baseline checkpoint committed to this repo via git-lfs can be used directly for inference without re-training:
+
+```bash
+git lfs pull   # if not already done
+uv run evaluate --split dev
 ```
 
 ---
 
-## Reproducibility Checklist (README.md must cover)
+## HP NER Pipeline — Phase 1
 
-1. `uv sync` — install all dependencies
-2. `uv run scripts/run_scrape.py` — scrape and filter
-3. Manual annotation step (instructions for Doccano or BRAT)
-4. `uv run scripts/run_agreement.py` — compute IAA
-5. `uv run scripts/run_train_baseline.py` — fine-tune baseline
-6. `uv run scripts/run_train_enhanced.py` — DAPT + CRF
-7. `uv run scripts/run_eval_llm.py` — LLM zero/few-shot
-8. `uv run scripts/run_analysis.py` — all evaluation tables + plots
+The full pipeline runs in order: **scrape → clean → build dictionary → silver label**.
 
-All random seeds fixed via `seed=42` in all trainers and dataset splits.
-All results written to `results/` as JSON + CSV.
+### Step 1 — Scrape the HP Fandom Wiki
+
+```bash
+python scripts/run_scrape.py
+```
+
+Recursively crawls HP Fandom wiki pages (depth=2 by default) and writes raw `.jsonl` to `data/raw/wiki_data.jsonl`. Each record:
+
+```json
+{"url": "...", "title": "Harry Potter", "paragraphs": ["...", "..."]}
+```
+
+Edit `scripts/run_scrape.py` to change seed URLs, crawl depth, or output path.
+
+### Step 2 — Clean the scraped text
+
+`src/scraping/cleaner.py` strips wiki markup, normalizes Unicode, and sentencizes paragraphs using spaCy. Import it directly or adapt `clean_dataset()`:
+
+```python
+from src.scraping.cleaner import clean_dataset
+
+cleaned, dropped = clean_dataset(
+    input_path="data/raw/wiki_data.jsonl",
+    output_path="data/cleaned/wiki_data_clean.jsonl",
+)
+print(f"Kept {len(cleaned)}, dropped {len(dropped)}")
+```
+
+Output `paragraphs` becomes a list of sentence lists.
+
+### Step 3 — Build the entity dictionary
+
+Run these three scripts in sequence:
+
+```bash
+# 1. Crawl HP Fandom categories → data/dictionaries/hp_canonical.json
+python scripts/run_category_crawler.py
+
+# 2. Scrape infobox aliases for each entity → data/dictionaries/hp_aliases.json
+python scripts/run_alias_scraper.py
+
+# 3. Write per-label .txt files for the greedy matcher
+#    → data/dictionaries/txts/{CHARACTER,LOCATION,ORGANIZATION,CREATURE,SPELL,ARTIFACT}.txt
+python scripts/run_writer.py
+```
+
+The `.txt` format (used by `src/silver_labeling/entity_dict.py`):
+```
+Harry Potter
+>The Boy Who Lived
+>Harry
+Hermione Granger
+>Hermione
+```
+Canonical name first, aliases prefixed with `>`, sorted longest-first for greedy matching.
+
+### Step 4 — Silver labeling
+
+Combines dictionary lookup (high precision for SPELL/ARTIFACT/CREATURE) with the baseline DeBERTa model (covers CHARACTER/LOCATION/ORGANIZATION):
+
+```bash
+python scripts/run_silver_label.py
+# or with options:
+python scripts/run_silver_label.py --batch-size 64 --run run_YYYYmmdd_HHMMSS
+```
+
+Requires a trained baseline checkpoint in `outputs/baseline/`. Output goes to `data/silver/`.
+
+Each output record:
+```json
+{
+  "tokens": ["Harry", "Potter", "cast", "Expelliarmus"],
+  "silver_labels": ["B-CHARACTER", "I-CHARACTER", "O", "B-SPELL"],
+  "silver_source": ["dict", "dict", "O", "dict"]
+}
+```
 
 ---
 
-## Final Paper Sections (ACL, 5 pages)
+## IOB2 Utilities
 
-| Section | Content |
-|---|---|
-| Introduction | Research question, motivation, contributions |
-| Related Work | BERT NER, domain adaptation, fictional NER, LLM NER |
-| Data | Scraping, filtering stats, annotation process, IAA results |
-| Models | Baseline, DAPT, CRF, LLM prompting setup |
-| Experiments | Training details, hyperparameters, all evaluation settings |
-| Results | Table: P/R/F1 per model × dataset; ablation table; learning curves |
-| Analysis | Qualitative errors, token importance, partial match breakdown |
-| Conclusion | Answer research question, limitations, future work |
+`src/preprocessing/iob2.py` is the shared reader/writer used throughout the project.
+
+```python
+from src.preprocessing.iob2 import IOB2Reader, IOB2Writer, Sentence
+from pathlib import Path
+
+# Read generic 2-column IOB2 (token\tlabel)
+sentences = IOB2Reader(mode="generic", validate=True).read(Path("data/annotated/file.iob2"))
+
+# Read EWT 5-column format (skips # comment lines)
+sentences = IOB2Reader(mode="ewt", validate=False).read(Path("data/en_ewt-ud-dev.iob2"))
+
+# Write generic IOB2
+IOB2Writer().write(sentences, Path("data/output.iob2"))
+
+# Write EWT prediction format (idx\ttoken\tlabel) — compatible with span_f1.py
+IOB2Writer(mode="ewt").write(sentences, Path("outputs/predictions/dev.iob2"))
+```
+
+`validate=True` raises `ValueError` on illegal IOB2 transitions (e.g., `O → I-X`).  
+`fix_transitions=True` on `IOB2Writer` silently rewrites illegal `I-` labels to `B-` instead of raising.
+
+---
+
+## Reproducibility
+
+Full pipeline from scratch:
+
+```bash
+# 1. Install
+uv sync
+
+# 2. Scrape
+python scripts/run_scrape.py
+
+# 3. Clean (adapt paths in cleaner.py)
+python -c "from src.scraping.cleaner import clean_dataset; clean_dataset('data/raw/wiki_data.jsonl', 'data/cleaned/wiki_data_clean.jsonl')"
+
+# 4. Build entity dictionary
+python scripts/run_category_crawler.py
+python scripts/run_alias_scraper.py
+python scripts/run_writer.py
+
+# 5. Train EWT baseline (needed for silver labeling)
+uv run train
+
+# 6. Silver label
+python scripts/run_silver_label.py
+
+# 7. (Manual) Annotate in Doccano using silver labels as pre-annotations
+
+# 8. Evaluate baseline
+uv run evaluate --split dev
+uv run evaluate --split test
+```
+
+All random seeds fixed at `seed=42`.
+
+---
+
+## Notes
+
+- **Subword masking:** Only the first subword token of each word is labeled; continuation subwords get `IGNORED_LABEL_ID = -100` and are excluded from loss and evaluation.
+- **Truncation:** Sentences longer than `max_length` are truncated; truncated tokens are predicted as `O`.
+- **Label vocabulary:** Built from the training set and saved to `run_.../label2id.json`. EWT labels: `O, B-PER, I-PER, B-LOC, I-LOC, B-ORG, I-ORG`.
+- **git-lfs:** `outputs/` is in `.gitignore` by default. Model checkpoints committed to this repo were force-added and tracked via git-lfs. Use `git lfs pull` to download them; use `git add -f` to commit new ones.
