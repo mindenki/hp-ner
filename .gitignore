@@ -19,6 +19,7 @@ data/raw/
 data/cleaned/
 data/filtered/
 data/silver/
+data/to_annotate/
 
 # Jupyter
 .ipynb_checkpoints/
