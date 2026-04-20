@@ -94,20 +94,15 @@ def main():
         ):
             sentence_conflicts = defaultdict(int)
 
-        for idx, (record, tokens, bert_tags) in enumerate(zip(records, all_tokens, all_bert_tags)):
-            sentence_conflicts = defaultdict(int)
-            
             dict_matches = entity_dict.match(tokens)
             dict_tags = matches_to_bio(tokens, dict_matches)
 
-            merged_tags, sources = merge(
+            merged_tags, sources, number_of_conflicts = merge(
                 dict_tags=dict_tags,
                 bert_tags=bert_tags,
                 conflict_counts=sentence_conflicts,
             )
 
-            merged_tags, sources, number_of_conflicts = merge(dict_tags=dict_tags, bert_tags=bert_tags, conflict_counts=sentence_conflicts)
-            
             spans = iob2_to_spans(merged_tags)
             entity_types = sorted(set(s for _, _, s in spans))
             entity_count = len(spans)
@@ -125,7 +120,6 @@ def main():
                 "entity_types": entity_types,
                 "silver_source": sources,
                 "number_of_conflicts": number_of_conflicts,
-                
             }
 
             out_f.write(json.dumps(out_record, ensure_ascii=False) + "\n")

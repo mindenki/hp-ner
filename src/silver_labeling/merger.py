@@ -10,7 +10,6 @@ silver_source tracks per-token provenance: 'dict', 'bert', 'both or 'O'.
 """
 
 import logging 
-from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +22,7 @@ def _get_label(tag: str) -> str:
         return "O"
     return tag.split("-")[1]
 
-def merge(dict_tags: list[str], bert_tags: list[str],  conflict_counts: dict[str, int]) -> tuple[list[str], list[str]]:
+def merge(dict_tags: list[str], bert_tags: list[str], conflict_counts: dict[str, int]) -> tuple[list[str], list[str], int]:
     """ 
     Merges the dict_tags and bert_tags according to the precedence rules.
     Also updates conflict_counts with any conflicts encountered.
