@@ -76,7 +76,7 @@ class SilverStats:
         max_n = max(self.entity_count_dist.keys())
         for n in range(0, min(max_n + 1, 11)):
             count = self.entity_count_dist.get(n, 0)
-            bar = "█" * (count * 40 // total) if total else ""
+            bar = "#" * (count * 40 // total) if total else ""
             logger.info(
                 f"{n:2d} entities: {count:5d} sentences {bar} percentage: {count / total:.1%}"
             )
