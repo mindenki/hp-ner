@@ -12,10 +12,19 @@ Both taggers receive the same tokenizations, and later on will be be merged in a
 
 import logging
 import spacy
+from spacy.cli import download as spacy_download
 
 from functools import lru_cache
 
 logger = logging.getLogger(__name__)
+
+def _load_spacy_model(name: str, **kwargs):
+    try:
+        return spacy.load(name, **kwargs)
+    except OSError:
+        logger.info("Model '%s' not found — downloading...", name)
+        spacy_download(name)
+        return spacy.load(name, **kwargs)
 
 class Tokenizer:
     """ 
@@ -24,7 +33,7 @@ class Tokenizer:
     """
 
     def __init__(self):
-        self._nlp = spacy.load("en_core_web_sm", disable=["parser", "ner", "lemmatizer", "attribute_ruler"]) # parser, ner, lemmatizer and attribute_ruler are not needed for tokenization, we only need the tokenizer component, so we disable the rest to save time and memory.
+        self._nlp = _load_spacy_model("en_core_web_sm", disable=["parser", "ner", "lemmatizer", "attribute_ruler"])
         logger.info("Loaded spaCy tokenizer.")
     
     
