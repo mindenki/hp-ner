@@ -15,8 +15,8 @@ class SilverStats:
     """
 
     def __init__(self):
-        self.label_counts = defaultdict(lambda: {"dict": 0, "bert": 0, "O": 0})
-
+        self.label_counts = defaultdict(lambda: {"dict": 0, "bert": 0, "both":0, "O": 0})
+        
         self.conflict_counts = defaultdict(int)
         self.total_sentences = 0
 
@@ -95,15 +95,17 @@ class SilverStats:
 
         # ── Per-label token coverage ───────────────────────────────────────
         logger.info("\nPer-label token coverage:")
-        total_tagged = 0
+        total_tagged = sum(
+            sum(source_counts.values())
+            for source_counts in self.label_counts.values()
+        )
         for label in sorted(self.label_counts):
             d = self.label_counts[label].get("dict", 0)
             b = self.label_counts[label].get("bert", 0)
-            total_tagged = d + b
-            logger.info(
-                f"{label}: dict {d} tokens ({d / total_tagged:.1%}), bert {b} tokens ({b / total_tagged:.1%}), total {total_tagged} tokens"
-            )
-
+            both = self.label_counts[label].get("both", 0)
+            label_total = b + d + both
+            logger.info(f"{label}: dict {d} tokens ({d/label_total:.1%}), bert {b} tokens ({b/label_total:.1%}), both {both} tokens ({both/label_total:.1%}), total {total_tagged} tokens")
+            
         # ── Co-occurrence ────────────────────────────────────────────
         logger.info("\nLabel co-occurrence:")
         sorted_cooc = sorted(self.label_cooccurrence.items(), key=lambda x: -x[1])

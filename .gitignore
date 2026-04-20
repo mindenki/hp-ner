@@ -25,3 +25,4 @@ data/silver/
 
 # OS
 .DS_Store
+*.safetensors

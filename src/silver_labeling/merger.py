@@ -5,7 +5,7 @@
         - CHARACTER/LOCATION/ORGANIZATION -> if one labels as entity, the other does not -> take the entity label
         Conflict(same span, different entity) -> dict wins
         
-silver_source tracks per-token provenance: 'dict', 'bert', or 'O'.
+silver_source tracks per-token provenance: 'dict', 'bert', 'both or 'O'.
 
 """
 
@@ -23,14 +23,15 @@ def _get_label(tag: str) -> str:
         return "O"
     return tag.split("-")[1]
 
-def merge(dict_tags: list[str], bert_tags: list[str], conflict_counts: dict[str, int]) -> tuple[list[str], list[str]]:
+def merge(dict_tags: list[str], bert_tags: list[str],  conflict_counts: dict[str, int]) -> tuple[list[str], list[str]]:
     """ 
     Merges the dict_tags and bert_tags according to the precedence rules.
     Also updates conflict_counts with any conflicts encountered.
     
-    Returns: (merged_tags, source_tags) source is either dict, bert, or O.
+    Returns: (merged_tags, source_tags, number_of_conflicts) source is either dict, bert, or O.
     """
     
+    number_of_conflicts = 0
     merged = []
     sources = []
     
@@ -68,18 +69,19 @@ def merge(dict_tags: list[str], bert_tags: list[str], conflict_counts: dict[str,
         
         # Both label as entity 
     
-        # they agree; take either
+        # they agree; put both 
         if d_label == b_label:
             merged.append(d_tag)
-            sources.append("dict")
+            sources.append("both")
         # they conflict; dict wins but count the conflict
         
         else:
+            number_of_conflicts += 1
             conflict_counts[f"{b_label}->{d_label}"] += 1
-            merged.append(d_tag)
-            sources.append("dict")
+            merged.append(b_tag)
+            sources.append("bert")
             
-    return merged, sources
+    return merged, sources, number_of_conflicts
 
 
 def iob2_to_spans(tags: list[str]) -> list[tuple[int,int,str]]:
