@@ -1,0 +1,13 @@
+services:
+  doccano:
+    image: doccano/doccano
+    container_name: doccano
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - doccano-db:/data
+    restart: unless-stopped
+
+volumes:
+  doccano-db:
