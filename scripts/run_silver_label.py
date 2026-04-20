@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 def parse_args():
     p = argparse.ArgumentParser(description="S5 Silver Labeling")
-    p.add_argument("--input",      default="data/filtered/hp_sentences_filtered.jsonl")
+    p.add_argument("--input",      default="data/clean/wiki_data_filtered.jsonl")
     p.add_argument("--dicts-dir",  default="data/dictionaries/txts")
     p.add_argument("--output",     default="data/silver/hp_silver.jsonl")
     p.add_argument("--batch-size", type=int, default=32)

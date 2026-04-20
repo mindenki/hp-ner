@@ -6,8 +6,10 @@ requires-python = ">=3.11"
 
 dependencies = [
     # Model + training
-    "torch>=2.2",
-    "transformers>=4.40",
+    "torch>=2.6.0; sys_platform != 'darwin'",
+    "torch==2.2.2; sys_platform == 'darwin'",
+    # "en_core_web_trf @ https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.8.0/en_core_web_trf-3.8.0-py3-none-any.whl",
+    "transformers>=4.40,<4.47",
     "datasets>=2.19",
     "seqeval>=1.2",
     # Tokenizer backends
@@ -16,7 +18,7 @@ dependencies = [
     # Config + CLI
     "pyyaml>=6.0",
     # Data / utils
-    "numpy>=1.26",
+    "numpy>=1.26,<2",
     # Scraping (phase1-hanna)
     "requests>=2.31",
     "beautifulsoup4>=4.12",
@@ -42,5 +44,20 @@ name = "pytorch-cu128"
 url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.uv.sources]
-torch = [{ index = "pytorch-cu128" }]
+torch = [
+  { index = "pytorch-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+  { index = "pytorch-cpu",   marker = "sys_platform == 'darwin'" },
+]
+
+[tool.uv]
+environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'win32'",
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+]
