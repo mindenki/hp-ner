@@ -20,9 +20,10 @@ data/cleaned/
 data/filtered/
 data/silver/
 
+*.log
+
 # Jupyter
 .ipynb_checkpoints/
 
 # OS
 .DS_Store
-*.safetensors
