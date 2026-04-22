@@ -19,17 +19,47 @@ from pathlib import Path
 from src.annotation.doccano_client import DoccanoClient
 
 LABELS = [
-    {"text": "Character",    "suffix_key": "c", "background_color": "#4A90D9", "text_color": "#ffffff"},
-    {"text": "Location",     "suffix_key": "l", "background_color": "#7CB342", "text_color": "#ffffff"},
-    {"text": "Organization", "suffix_key": "o", "background_color": "#F4A335", "text_color": "#ffffff"},
-    {"text": "Creature",     "suffix_key": "r", "background_color": "#9C27B0", "text_color": "#ffffff"},
-    {"text": "Spell",        "suffix_key": "s", "background_color": "#E53935", "text_color": "#ffffff"},
-    {"text": "Artifact",     "suffix_key": "a", "background_color": "#00897B", "text_color": "#ffffff"},
+    {
+        "text": "Character",
+        "suffix_key": "c",
+        "background_color": "#4A90D9",
+        "text_color": "#ffffff",
+    },
+    {
+        "text": "Location",
+        "suffix_key": "l",
+        "background_color": "#7CB342",
+        "text_color": "#ffffff",
+    },
+    {
+        "text": "Organization",
+        "suffix_key": "o",
+        "background_color": "#F4A335",
+        "text_color": "#ffffff",
+    },
+    {
+        "text": "Creature",
+        "suffix_key": "r",
+        "background_color": "#9C27B0",
+        "text_color": "#ffffff",
+    },
+    {
+        "text": "Spell",
+        "suffix_key": "s",
+        "background_color": "#E53935",
+        "text_color": "#ffffff",
+    },
+    {
+        "text": "Artifact",
+        "suffix_key": "a",
+        "background_color": "#00897B",
+        "text_color": "#ffffff",
+    },
 ]
 
 # Files to import, in order. Each annotator imports their own unique file.
 IMPORT_FILES = [
-    "overlap_set.jsonl",
+    "overlap.jsonl",
     "peter_unique.jsonl",
     "hanna_unique.jsonl",
     "zita_unique.jsonl",
@@ -42,14 +72,16 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--base-url", default="http://localhost:8000", help="Doccano base URL")
+    parser.add_argument(
+        "--base-url", default="http://localhost:8000", help="Doccano base URL"
+    )
     parser.add_argument("--username", default="admin")
     parser.add_argument("--password", default="hpner2024")
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data/to_annotate"),
-        help="Directory containing the JSONL batch files (default: data/to_annotate)",
+        default=Path("data/selected/gold"),
+        help="Directory containing the JSONL batch files (default: data/selected/gold)",
     )
     parser.add_argument(
         "--project-name",
