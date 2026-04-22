@@ -32,6 +32,54 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+LABEL_DISPLAY = {
+    "CHAR": "Character",
+    "LOC": "Location",
+    "ORG": "Organization",
+    "SPELL": "Spell",
+    "CREA": "Creature",
+    "ARTI": "Artifact",
+}
+def to_doccano_labels(tokens: list[str], tags: list[str], text: str) -> list[list]:
+    """Convert IOB2 tags to Doccano character-offset format.
+    Returns list of [start, end, label] spans.
+    """
+    
+    spans = []
+    i = 0
+    char_pos = 0
+    
+    while i < len(tokens):
+        token = tokens[i]
+        
+        
+        start = text.index(token, char_pos) # token starts here
+        end = start + len(token) # token ends here
+        
+        if tags[i].startswith("B-"):
+            entity_type = tags[i][2:]
+            span_start = start
+            span_end = end
+            
+            # continue until the end of the entity
+            
+            j = i + 1
+            while j < len(tokens) and tags[j] == f"I-{entity_type}":
+                next_token = tokens[j]
+                next_start = text.index(next_token, span_end) # next token starts after current span
+                next_end = next_start + len(next_token)
+                
+                span_end = next_end
+                j += 1
+            label = LABEL_DISPLAY.get(entity_type, entity_type)
+            spans.append([span_start, span_end, label])
+            char_pos = span_end
+            i = j
+        else:
+            char_pos = end
+            i += 1
+    return spans
+
 
 def parse_args():
     p = argparse.ArgumentParser(description="S5 Silver Labeling")
@@ -117,6 +165,7 @@ def main():
                 "text": record["text"],
                 "tokens": tokens,
                 "silver_labels": merged_tags,
+                "doccano_labels": to_doccano_labels(tokens, merged_tags, record["text"]),
                 "entity_count": entity_count,
                 "entity_types": entity_types,
                 "silver_source": sources,
