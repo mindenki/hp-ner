@@ -41,7 +41,6 @@ def merge(dict_tags: list[str], bert_tags: list[str], conflict_counts: dict[str,
     
         has_dict = d_label != "O"
         has_bert = b_label != "O"
-        
         # SPELL/ARTI/CREA -> dict always wins
         if d_label in DICT_ONLY_LABELS:
             merged.append(d_tag)
@@ -56,7 +55,8 @@ def merge(dict_tags: list[str], bert_tags: list[str], conflict_counts: dict[str,
         
         # only one labels as entity -> take that one
         if has_dict and not has_bert:
-            merged.append(d_tag)
+            # but if its a character, we will let not label it
+            merged.append("O" if d_label == "CHAR" else d_tag)
             sources.append("dict")
             continue
         

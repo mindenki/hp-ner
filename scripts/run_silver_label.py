@@ -113,6 +113,7 @@ def main():
 
             out_record = {
                 "id": record["id"],
+                "title": record["title"],
                 "text": record["text"],
                 "tokens": tokens,
                 "silver_labels": merged_tags,
