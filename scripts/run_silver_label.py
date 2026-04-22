@@ -165,7 +165,7 @@ def main():
                 "text": record["text"],
                 "tokens": tokens,
                 "silver_labels": merged_tags,
-                "doccano_labels": to_doccano_labels(tokens, merged_tags, record["text"]),
+                "labels": to_doccano_labels(tokens, merged_tags, record["text"]),
                 "entity_count": entity_count,
                 "entity_types": entity_types,
                 "silver_source": sources,
