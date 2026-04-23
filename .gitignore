@@ -15,8 +15,9 @@ env/
 outputs/
 
 # Scraped / generated data (large, use git lfs if committing)
+data/
 data/raw/
-data/cleaned/
+data/clean/
 data/filtered/
 data/silver/
 
