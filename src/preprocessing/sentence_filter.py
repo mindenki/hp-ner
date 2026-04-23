@@ -116,11 +116,3 @@ def filter_dataset(input_path, output_path, nlp = spacy.blank("en"), lsh = MinHa
 
     return cleaned, dropped
 
-
-input_path  = "./data/clean/wiki_data_clean.jsonl"
-output_path = "./data/clean/wiki_data_filtered.jsonl"
-
-nlp = spacy.blank("en")
-
-cleaned, dropped = filter_dataset(input_path, output_path)
-

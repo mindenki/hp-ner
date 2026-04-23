@@ -28,7 +28,7 @@ def is_valid_record(record):
     return True, None
 
 
-def sentencizer(text):
+def sentencizer(text, nlp):
     doc = nlp(text)
 
     return [sent.text for sent in doc.sents]
@@ -59,7 +59,7 @@ def clean_paragraph(paragraph):
     return paragraph
 
 
-def clean_record(record):
+def clean_record(record, nlp):
     cleaned_paragraphs = []
 
     for paragraph in record["paragraphs"]:
@@ -67,12 +67,16 @@ def clean_record(record):
         if not paragraph.strip():
             continue
  
-        cleaned_paragraphs.append(sentencizer(clean_paragraph(paragraph)))
+        cleaned_paragraphs.append(sentencizer(clean_paragraph(paragraph), nlp))
 
     return {**record, "paragraphs": cleaned_paragraphs}
 
 
-def clean_dataset(input_path, output_path):
+def clean_dataset(input_path, output_path, nlp=None):
+    if nlp is None:
+        nlp = spacy.blank("en")
+        nlp.add_pipe("sentencizer")
+
     try:
         records = load_jsonl(input_path)
     except FileNotFoundError:
@@ -89,7 +93,7 @@ def clean_dataset(input_path, output_path):
             continue
 
         # Step 2: clean each paragraph in the list
-        cleaned.append(clean_record(record))
+        cleaned.append(clean_record(record, nlp))
 
     # Save cleaned output
     with open(output_path, "w", encoding="utf-8") as f:
@@ -97,27 +101,3 @@ def clean_dataset(input_path, output_path):
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
     return cleaned, dropped
-
-
-nlp = spacy.blank("en")
-nlp.add_pipe("sentencizer")
-
-folder = "./data/raw/"
-input_path  = "./data/raw/wiki_data_newest.jsonl"
-output_path = "./data/clean/wiki_data_clean.jsonl"
-
-cleaned, dropped = clean_dataset(input_path, output_path)
-
-print(f"Kept:    {len(cleaned)} records")
-print(f"Dropped: {len(dropped)} records")
-
-if dropped:
-    print("\nDropped records:")
-    for d in dropped:
-        print(f"  '{d['title']}' → {d['reason']}")
-
-print("\n── Sample cleaned output ──")
-for record in cleaned[:3]:
-    print(f"\n[{record['title']}]")
-    for p in record["paragraphs"][:2]:
-        print(f"  {p}")
