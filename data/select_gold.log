@@ -1,0 +1,29 @@
+2026-04-23 20:31:30,382 [INFO] Loading records from data\selected\hp_15k.jsonl
+2026-04-23 20:31:30,561 [INFO] Loaded 15000 records.
+2026-04-23 20:31:30,603 [INFO] Bucket D (multi-type): pool=1292 selected=375
+2026-04-23 20:31:30,608 [INFO] Bucket C (conflict): pool=3442 selected=375
+2026-04-23 20:31:30,661 [INFO] Bucket B (rare types): pool=4070 selected=375
+2026-04-23 20:31:30,674 [INFO] Bucket A (high-confidence): pool=7188 selected=125
+2026-04-23 20:31:30,675 [INFO] Overlap set: target=188 selected=188
+2026-04-23 20:31:30,676 [INFO] Writing output to data\selected\gold
+2026-04-23 20:31:30,681 [INFO] Wrote 188 records to data\selected\gold\overlap.jsonl
+2026-04-23 20:31:30,696 [INFO] Wrote 266 records to data\selected\gold\peter_unique.jsonl
+2026-04-23 20:31:30,701 [INFO] Wrote 266 records to data\selected\gold\hanna_unique.jsonl
+2026-04-23 20:31:30,707 [INFO] Wrote 265 records to data\selected\gold\zita_unique.jsonl
+2026-04-23 20:31:30,713 [INFO] Wrote 265 records to data\selected\gold\anis_unique.jsonl
+2026-04-23 20:31:30,713 [INFO] ============================================================
+2026-04-23 20:31:30,713 [INFO] GOLD ANNOTATION POOL SUMMARY
+2026-04-23 20:31:30,713 [INFO] ============================================================
+2026-04-23 20:31:30,713 [INFO] Bucket A_high_confidence: 125 sentences
+2026-04-23 20:31:30,713 [INFO] Bucket B_rare_types: 375 sentences
+2026-04-23 20:31:30,714 [INFO] Bucket C_conflict: 375 sentences
+2026-04-23 20:31:30,714 [INFO] Bucket D_multi_type: 375 sentences
+2026-04-23 20:31:30,715 [INFO] Total overlap sentences (in multiple buckets): 188
+2026-04-23 20:31:30,715 [INFO] Total unique sentences in gold pool (excluding overlap): 1250
+2026-04-23 20:31:30,715 [INFO] 
+Per-annotator workload:
+2026-04-23 20:31:30,715 [INFO] Unique sentences per annotator: 265
+2026-04-23 20:31:30,715 [INFO] Overlap sentences per annotator: 188
+2026-04-23 20:31:30,715 [INFO] Total sentences per annotator: 453
+2026-04-23 20:31:30,716 [INFO] ============================================================
+2026-04-23 20:31:30,716 [INFO] Gold selection completed. Files ready for import with setup_doccano_project.py
