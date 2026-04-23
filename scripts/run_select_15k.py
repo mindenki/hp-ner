@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 ANNOTATORS = ["peter", "hanna", "zita", "anis"]
 
-SOURCE_CAP = 50  # max sentences per wiki page
+SOURCE_CAP = 20  # max sentences per wiki page
 
 TARGETS = {
     "CHAR": 5500,
