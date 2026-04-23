@@ -24,6 +24,8 @@ dependencies = [
     # NLP / filtering (phase1-anis, phase1-zita)
     "spacy>=3.8",
     "pyunormalize>=15.0",
+    "langdetect>=1.0.9",
+    "datasketch>=1.6",
     # IAA computation (phase2)
     "scikit-learn>=1.3",
 ]

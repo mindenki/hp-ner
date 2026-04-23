@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 LABEL_MAP = {
-    "character": "CHAR",
+     "character": "CHAR", # dictionary character names are very ambiguous, so we will not use them for labeling; we will let BERT handle them instead. We still need to indicate bert and dict agreeing
     "location": "LOC",
     "organization": "ORG",
     "spell": "SPELL",

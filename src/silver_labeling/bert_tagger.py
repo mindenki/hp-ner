@@ -17,7 +17,7 @@ from pathlib import Path
 
 import torch
 
-from baseline.src.model import DeBertaNER
+from baseline.src.model import DeBERTaNER
 
 
 logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ class BertTagger:
         
         self.label2id = json.loads(label2id_path.read_text(encoding="utf-8"))
         self.id2label = {v: k for k, v in self.label2id.items()}
-        self.model = DeBertaNER.load(best_model_path)
+        self.model = DeBERTaNER.load(best_model_path)
         self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.model.to(self.device)
         self.model.model.eval()
@@ -157,4 +157,4 @@ class BertTagger:
         
 
         
-        
+print("hello cat!bongo cat ! :Ö")
