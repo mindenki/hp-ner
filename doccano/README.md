@@ -28,7 +28,7 @@ cp doccano/.env.example doccano/.env
 
 # 2. Start Doccano (runs in the background)
 cd doccano
-docker compose up -d
+docker compose up doccano
 ```
 
 If `cp` is not available on your machine, use one of these instead:
@@ -48,9 +48,9 @@ Open http://localhost:8000 in your browser. Log in with:
 - **Username:** `admin`
 - **Password:** `hpner2024`
 
-> You can change the password in `doccano/.env` before running `docker compose up -d`.
+> You can change the password in `doccano/.env` before running `docker compose up doccano`.
 > If you change it after the first run, recreate the container:
-> `docker compose down && docker compose up -d`
+> `docker compose down && docker compose up doccano`
 
 ---
 
@@ -131,11 +131,10 @@ touching the mouse.
 
 > **If you used the script above, your sentences are already imported — skip this section.**
 
-
-| File                       | Description                                   |
-| -------------------------- | --------------------------------------------- |
-| `overlap.jsonl`            | Sentences annotated by everyone (for IAA)     |
-| `<your_name>_unique.jsonl` | 350 sentences assigned only to you            |
+| File                       | Description                               |
+| -------------------------- | ----------------------------------------- |
+| `overlap.jsonl`            | Sentences annotated by everyone (for IAA) |
+| `<your_name>_unique.jsonl` | 350 sentences assigned only to you        |
 
 Import them in this order:
 
@@ -194,7 +193,7 @@ Annotations are stored in a Docker volume and persist across restarts.
 docker compose down
 
 # Resume later
-docker compose up -d
+docker compose up doccano
 ```
 
 ---
@@ -242,7 +241,7 @@ This writes files to `data/annotated/` as:
 ```bash
 docker compose down
 docker volume rm doccano_doccano-db   # deletes all annotations - only do this if you haven't started yet
-docker compose up -d
+docker compose up doccano
 ```
 
 **Pre-annotations not visible** - make sure you imported the JSONL file correctly.
