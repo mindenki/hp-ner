@@ -5,29 +5,43 @@ description = "Named Entity Recognition for the Harry Potter universe"
 requires-python = ">=3.11"
 
 dependencies = [
-    # Model + training
-    "torch>=2.2",
-    "transformers>=4.40",
-    "datasets>=2.19",
-    "seqeval>=1.2",
-    # Tokenizer backends
-    "sentencepiece>=0.2",
-    "protobuf>=4.0",
-    # Config + CLI
-    "pyyaml>=6.0",
-    # Data / utils
-    "numpy>=1.26",
-    # Scraping (phase1-hanna)
+    # Scraping
     "requests>=2.31",
     "beautifulsoup4>=4.12",
     "lxml>=5.0",
-    # NLP / filtering (phase1-anis, phase1-zita)
+    # NLP / filtering
     "spacy>=3.8",
     "pyunormalize>=15.0",
     "langdetect>=1.0.9",
     "datasketch>=1.6",
-    # IAA computation (phase2)
+    # Data / utils
+    "numpy>=1.26",
+    # Config + CLI
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Installed on the annotation VM — everything needed to run the annotation
+# scripts against Doccano. Deliberately excludes torch and CUDA libs.
+annotation = [
+    "requests>=2.31",
     "scikit-learn>=1.3",
+]
+
+# Installed on dev machines / training machines for model training and evaluation
+training = [
+    "torch>=2.2",
+    "transformers>=4.40",
+    "datasets>=2.19",
+    "seqeval>=1.2",
+    "sentencepiece>=0.2",
+    "protobuf>=4.0",
+    "scikit-learn>=1.3",
+]
+
+# Everything — for local dev where you want it all
+all = [
+    "hp-ner[annotation,training]",
 ]
 
 [project.scripts]

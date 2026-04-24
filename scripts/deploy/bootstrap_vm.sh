@@ -103,7 +103,7 @@ if ! command -v uv &>/dev/null; then
     export PATH="\$HOME/.local/bin:\$PATH"
 fi
 cd "${REMOTE_DIR}"
-uv sync
+uv sync --extra annotation
 
 echo ""
 echo "Bootstrap complete."
