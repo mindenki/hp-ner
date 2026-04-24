@@ -89,11 +89,7 @@ def create_django_user(
     container_name: str,
     local: bool,
 ) -> bool:
-    """Create a Django user inside the Doccano container via docker exec.
-
-    Works both locally (docker exec directly) and remotely (via SSH + docker exec).
-    Returns True if created successfully, False if the user already exists.
-    """
+    """Create a Django user inside the Doccano container via docker exec."""
     python_snippet = (
         "from django.contrib.auth.models import User; "
         f"User.objects.filter(username='{username}').exists() or "
@@ -113,8 +109,7 @@ def create_django_user(
     if local or ssh_host is None:
         cmd = docker_cmd
     else:
-        remote_cmd = " ".join(docker_cmd)
-        cmd = ["ssh", f"{ssh_user}@{ssh_host}", remote_cmd]
+        cmd = ["ssh", f"{ssh_user}@{ssh_host}", " ".join(docker_cmd)]
 
     logger.debug("Running: %s", " ".join(cmd))
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -142,39 +137,28 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument(
-        "--base-url",
-        default="http://localhost:8000",
-        help="Doccano base URL (default: http://localhost:8000)",
-    )
+    parser.add_argument("--base-url", default="http://localhost:8000")
     parser.add_argument("--admin-username", default="admin")
     parser.add_argument("--admin-password", default="hpner2024")
-    parser.add_argument(
-        "--ssh-host",
-        default=None,
-        help="SSH hostname/IP for remote docker exec (omit for local)",
-    )
+    parser.add_argument("--ssh-host", default=None)
     parser.add_argument("--ssh-user", default="azureuser")
-    parser.add_argument(
-        "--container-name",
-        default="doccano",
-        help="Docker container name (default: doccano)",
-    )
+    parser.add_argument("--container-name", default="doccano")
     parser.add_argument(
         "--local",
         action="store_true",
-        help="Run docker exec locally (no SSH). Equivalent to --ssh-host omitted.",
+        help="Run docker exec locally (no SSH).",
     )
     parser.add_argument(
         "--data-dir",
         type=Path,
         default=Path("data/selected/gold"),
-        help="Directory containing JSONL batch files (default: data/selected/gold)",
     )
+    parser.add_argument("--overlap-file", default="overlap.jsonl")
     parser.add_argument(
-        "--overlap-file",
-        default="overlap.jsonl",
-        help="Overlap JSONL filename (default: overlap.jsonl)",
+        "--import-scope",
+        choices=("both", "overlap", "personal"),
+        default="both",
+        help="Which batches to import: both, overlap only, or personal only (default: both)",
     )
     parser.add_argument(
         "--skip-users",
@@ -186,16 +170,12 @@ def main() -> None:
         action="store_true",
         help="Create projects and members but skip JSONL import",
     )
-    parser.add_argument(
-        "--run-id",
-        default=None,
-        help="Optional run identifier appended to project names (default: timestamp)",
-    )
+    parser.add_argument("--run-id", default=None)
     args = parser.parse_args()
 
     run_id = args.run_id or time.strftime("%Y%m%d_%H%M%S")
 
-    # --- Step 1: Create annotator user accounts via docker exec
+    # ── Step 1: Create user accounts ─────────────────────────────────────────
     if not args.skip_users:
         logger.info("=== Step 1: Creating annotator user accounts ===")
         for ann in ANNOTATORS:
@@ -211,16 +191,15 @@ def main() -> None:
     else:
         logger.info("=== Step 1: Skipping user creation (--skip-users) ===")
 
-    # --- Step 2: Connect to Doccano API
+    # ── Step 2: Connect to Doccano API ────────────────────────────────────────
     logger.info("=== Step 2: Connecting to Doccano at %s ===", args.base_url)
     client = DoccanoClient(args.base_url, args.admin_username, args.admin_password)
 
-    # Fetch all users so we can look up IDs by username
     users = client.list_users()
     user_id_map = {u["username"]: u["id"] for u in users}
     logger.info("Found %d users: %s", len(users), list(user_id_map.keys()))
 
-    # --- Step 3: Create one project per annotator
+    # ── Step 3: Create one project per annotator ──────────────────────────────
     logger.info("=== Step 3: Creating projects and importing data ===")
     for ann in ANNOTATORS:
         username = ann["username"]
@@ -233,23 +212,21 @@ def main() -> None:
         for label in LABELS:
             client.add_label(project_id, label)
 
-        # Add the annotator as a member of their own project
         user_id = user_id_map.get(username)
         if user_id is None:
-            logger.warning(
-                "  User '%s' not found in Doccano — skipping membership. "
-                "Was user creation successful?",
-                username,
-            )
+            logger.warning("  User '%s' not found — skipping membership.", username)
         else:
             client.add_project_member(project_id, user_id, role="annotator")
 
-        # Import JSONL batches
+        # ── Import based on --import-scope ────────────────────────────────────
         if not args.skip_import:
-            for filename, batch in [
-                (args.overlap_file, "overlap"),
-                (f"{username}_unique.jsonl", "personal"),
-            ]:
+            import_files = []
+            if args.import_scope in ("both", "overlap"):
+                import_files.append((args.overlap_file, "overlap"))
+            if args.import_scope in ("both", "personal"):
+                import_files.append((f"{username}_unique.jsonl", "personal"))
+
+            for filename, batch in import_files:
                 path = args.data_dir / filename
                 if not path.exists():
                     logger.error("  Required file not found: %s", path)
@@ -267,3 +244,7 @@ def main() -> None:
         "Each annotator logs in with username=<their name>, password=%s",
         ANNOTATORS[0]["password"],
     )
+
+
+if __name__ == "__main__":
+    main()
