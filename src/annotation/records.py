@@ -9,8 +9,17 @@ from src.annotation.types import AnnotationRecord, LabelSpan, RawRecord
 
 def _normalize_span(span: object) -> LabelSpan:
     """Normalize one raw span annotation to the required LabelSpan schema."""
+    if isinstance(span, dict):
+        if not {"start", "end", "label"}.issubset(span):
+            raise ValueError(f"Invalid span dict format: {span!r}")
+        start = int(span["start"])
+        end = int(span["end"])
+        label = str(span["label"])
+        return LabelSpan(start=start, end=end, label=label)
+
     if not isinstance(span, (list, tuple)) or len(span) != 3:
         raise ValueError(f"Invalid span format: {span!r}")
+
     start = int(span[0])
     end = int(span[1])
     label = str(span[2])
@@ -19,14 +28,21 @@ def _normalize_span(span: object) -> LabelSpan:
 
 def normalize_record(raw: RawRecord) -> AnnotationRecord:
     """Normalize one record to the project's required annotation schema."""
-    required = ("text", "labels", "entity_types", "entity_count")
+    required = ("text", "entity_types", "entity_count")
     missing = [key for key in required if key not in raw]
     if missing:
         raise ValueError(f"Record missing required keys {missing}: {raw}")
 
+    if "labels" in raw:
+        raw_spans = raw["labels"]
+    elif "label" in raw:
+        raw_spans = raw["label"]
+    else:
+        raise ValueError(f"Record missing required key 'label'/'labels': {raw}")
+
     text = str(raw["text"])
 
-    labels = [_normalize_span(span) for span in raw["labels"]]
+    labels = [_normalize_span(span) for span in raw_spans]
     labels.sort(key=lambda span: (span["start"], span["end"], span["label"]))
 
     entity_types = [str(value) for value in raw["entity_types"]]
@@ -66,7 +82,10 @@ def write_normalized_jsonl(records: Iterable[AnnotationRecord], path: Path) -> i
         for record in records:
             payload = {
                 "text": record["text"],
-                "labels": record["labels"],
+                "label": [
+                    [span["start"], span["end"], span["label"]]
+                    for span in record["labels"]
+                ],
                 "entity_types": record["entity_types"],
                 "entity_count": record["entity_count"],
                 "meta": record["meta"]
