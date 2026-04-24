@@ -15,6 +15,7 @@ services:
   caddy:
     image: caddy:alpine
     container_name: caddy
+    env_file: .env
     ports:
       - "80:80" # HTTP -> redirect to HTTPS
       - "443:443" # HTTPS for annotators

@@ -54,17 +54,11 @@ echo "    DNS arg:        ${DNS_ARG}"
 echo ""
 
 # ── 1. Resolve FQDN ──────────────────────────────────────────────────────────
-# If the argument already contains dots (i.e. it's a full FQDN like
-# hp-ner.swedencentral.cloudapp.azure.com), use it directly.
-# Otherwise treat it as a short label and set it via Azure CLI.
-
 if [[ "${DNS_ARG}" == *.* ]]; then
-    # Full FQDN passed — DNS already configured in the portal
     FQDN="${DNS_ARG}"
     echo "==> [1/5] FQDN provided directly — skipping Azure CLI DNS setup."
     echo "    FQDN: ${FQDN}"
 else
-    # Short label passed — set it via Azure CLI
     echo "==> [1/5] Short label detected — setting DNS label via Azure CLI ..."
 
     if ! command -v az &>/dev/null; then
@@ -165,12 +159,12 @@ echo "  DOCCANO_DOMAIN=${FQDN}"
 
 echo ""
 echo "--- Hardening firewall (ufw) ---"
-sudo ufw allow  22/tcp  comment "SSH"
-sudo ufw allow  80/tcp  comment "HTTP (Let's Encrypt)"
-sudo ufw allow 443/tcp  comment "HTTPS (Doccano annotators)"
-sudo ufw deny  8000/tcp comment "Doccano direct (SSH tunnel only)"
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw deny 8000/tcp
 sudo ufw --force enable
-sudo ufw status verbose
+sudo ufw status
 
 echo ""
 echo "--- Restarting Doccano stack ---"
@@ -192,7 +186,7 @@ done
 docker compose ps
 ENDSSH
 
-# ── 4. Summary ────────────────────────────────────────────────────────────────
+# ── 4. Verify HTTPS from local machine ────────────────────────────────────────
 echo ""
 echo "==> [4/5] Verifying HTTPS from local machine ..."
 CODE=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 "https://${FQDN}" 2>/dev/null || echo "000")
