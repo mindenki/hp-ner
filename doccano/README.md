@@ -23,12 +23,24 @@ in the menu bar / system tray before continuing.
 ## One-time Setup
 
 ```bash
-# 1. Copy the environment template (only needed once or create your own)
+# 1. Copy the environment template (only needed once, or create your own)
 cp doccano/.env.example doccano/.env
 
 # 2. Start Doccano (runs in the background)
 cd doccano
 docker compose up -d
+```
+
+If `cp` is not available on your machine, use one of these instead:
+
+```powershell
+# Windows PowerShell
+Copy-Item doccano/.env.example doccano/.env
+```
+
+```bat
+:: Windows Command Prompt (cmd.exe)
+copy doccano\.env.example doccano\.env
 ```
 
 Open http://localhost:8000 in your browser. Log in with:
@@ -52,16 +64,36 @@ Make sure Doccano is running, then from the **project root**:
 
 ```bash
 # Run this once to create the project and import everyone's sentences
-uv run python scripts/annotation/setup_doccano_project.py
+uv run python scripts/annotation/setup_doccano_project.py --annotator peter
 ```
 
-This creates the "HP-NER Gold Set" project, adds all 6 labels with the correct
-colours and keyboard shortcuts, and imports all JSONL batch files automatically.
+This creates a project with the default name pattern:
+
+`HP-NER Gold - {annotator} - {run_id}`
+
+where `run_id` is a timestamp (for example `20260424_153200`), adds all 6 labels
+with the correct colours and keyboard shortcuts, and imports JSONL batch files.
 
 To use a custom password or URL:
 
 ```bash
 uv run python scripts/annotation/setup_doccano_project.py --password mypassword --base-url http://localhost:8000
+```
+
+To set an explicit run identifier (useful for repeated imports):
+
+```bash
+uv run python scripts/annotation/setup_doccano_project.py --annotator peter --run-id overlap_fix_01
+```
+
+To import only one split:
+
+```bash
+# overlap only
+uv run python scripts/annotation/setup_doccano_project.py --annotator peter --import-scope overlap
+
+# personal only
+uv run python scripts/annotation/setup_doccano_project.py --annotator peter --import-scope personal
 ```
 
 To create the project and labels without importing files yet (e.g. if you want
@@ -76,7 +108,7 @@ uv run python scripts/annotation/setup_doccano_project.py --skip-import
 Do this once in your browser after logging in:
 
 1. Click **Create** -> choose **Sequence Labeling**
-2. Name: `HP-NER Gold Set`
+2. Name: use a unique name, e.g. `HP-NER Gold - peter - 20260424_153200`
 3. Leave all other options at their defaults -> **Create**
 
 Then in the left sidebar, click **Labels** -> **Create label** and add each row:
@@ -102,14 +134,14 @@ touching the mouse.
 
 | File                       | Description                                   |
 | -------------------------- | --------------------------------------------- |
-| `overlap_set.jsonl`        | 100 sentences annotated by everyone (for IAA) |
+| `overlap.jsonl`            | Sentences annotated by everyone (for IAA)     |
 | `<your_name>_unique.jsonl` | 350 sentences assigned only to you            |
 
 Import them in this order:
 
 1. In your project, go to **Dataset** -> **Actions** -> **Import Dataset**
 2. Format: **JSONL**
-3. Select `overlap_set.jsonl` -> **Import**
+3. Select `overlap.jsonl` -> **Import**
 4. Repeat for `<your_name>_unique.jsonl`
 
 The silver labels will load as pre-annotations - you correct them rather than
@@ -170,6 +202,26 @@ docker compose up -d
 ## Exporting Your Annotations
 
 When you've finished all your sentences:
+
+### Option A: Script (recommended)
+
+```bash
+# Export all projects and split to overlap/personal files
+uv run python scripts/annotation/export_annotations.py
+
+# Export only overlap split
+uv run python scripts/annotation/export_annotations.py --export-scope overlap
+
+# Export only selected project IDs
+uv run python scripts/annotation/export_annotations.py --project-ids 12 13
+```
+
+This writes files to `data/annotated/` as:
+
+- `<project_name>_overlap.jsonl`
+- `<project_name>_personal.jsonl`
+
+### Option B: Manual (browser)
 
 1. In your project, go to **Dataset** -> **Actions** -> **Export Dataset**
 2. Format: **JSONL**
