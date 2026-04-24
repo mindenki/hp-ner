@@ -37,6 +37,13 @@ class ExportSplitStats(TypedDict):
     skipped: int
 
 
+ROLE_IDS = {
+    "project_admin": 1,
+    "annotator": 2,
+    "annotation_approver": 3,
+}
+
+
 class DoccanoClient:
     def __init__(self, base_url: str, username: str, password: str) -> None:
         """Initialize Doccano client, establish session and authenticate."""
@@ -339,20 +346,14 @@ class DoccanoClient:
         user_id: int,
         role: str = "annotator",
     ) -> None:
-        """Add a user as a member of a project with the given role.
-
-        Roles: 'project_admin', 'annotator', 'approver'
-        """
+        role_id = ROLE_IDS.get(role, 2)
         resp = self.session.post(
             f"{self.base}/v1/projects/{project_id}/members",
-            json={"user": user_id, "role": role},
+            json={"user": user_id, "role": role_id},
         )
         resp.raise_for_status()
         logger.info(
-            "  Added user id=%s as '%s' to project id=%s",
-            user_id,
-            role,
-            project_id,
+            "  Added user_id=%s to project %s as '%s'", user_id, project_id, role
         )
 
     def create_user(self, username: str, email: str, password: str) -> int:
