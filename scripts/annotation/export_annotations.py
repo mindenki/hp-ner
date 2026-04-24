@@ -10,6 +10,7 @@ Separation is based on metadata added during import:
 Usage:
     uv run python scripts/annotation/export_annotations.py
     uv run python scripts/annotation/export_annotations.py --project-ids 1 2
+    uv run python scripts/annotation/export_annotations.py --export-scope overlap
 """
 
 import argparse
@@ -49,6 +50,12 @@ def main() -> None:
         metavar="ID",
         help="Specific project IDs to export (default: all projects)",
     )
+    parser.add_argument(
+        "--export-scope",
+        choices=("both", "overlap", "personal"),
+        default="both",
+        help="Which split(s) to export: both, overlap only, or personal only (default: both)",
+    )
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -68,18 +75,40 @@ def main() -> None:
     for project in projects:
         pid = project["id"]
         safe_name = project["name"].lower().replace(" ", "_").replace("/", "-")
+
+        overlap_path = (
+            args.output_dir / f"{safe_name}_overlap.jsonl"
+            if args.export_scope in {"both", "overlap"} else None
+        )
+        personal_path = (
+            args.output_dir / f"{safe_name}_personal.jsonl"
+            if args.export_scope in {"both", "personal"} else None
+        )
         
-        overlap_path = args.output_dir / f"{safe_name}_overlap.jsonl"
-        personal_path = args.output_dir / f"{safe_name}_personal.jsonl"
-        
-        logger.info("Exporting project '%s' (id=%s) ...", project["name"], pid)
-        stats = client.export_project_split(pid, overlap_path, personal_path)
+        logger.info(
+            "Exporting project '%s' (id=%s, scope=%s) ...",
+            project["name"],
+            pid,
+            args.export_scope,
+        )
+        stats = client.export_project_split(
+            pid,
+            overlap_output_path=overlap_path,
+            personal_output_path=personal_path,
+            export_scope=args.export_scope,
+        )
 
         logger.info(
             "  Split exported records -> overlap: %s, personal: %s",
             stats["overlap"],
             stats["personal"],
         )
+        if stats["skipped"]:
+            logger.info(
+                "  Skipped %s records not included by export-scope=%s",
+                stats["skipped"],
+                args.export_scope,
+            )
         if stats["unknown"]:
             logger.warning(
                 "  %s records missing meta.batch; re-run setup/import with updated script "
