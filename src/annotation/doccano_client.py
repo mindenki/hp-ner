@@ -358,7 +358,26 @@ class DoccanoClient:
         )
 
     def assign_examples_to_user(self, project_id: int, user_id: int) -> int:
-        """Assign all examples in a project to a specific user."""
+        """Wait for import to complete then assign all examples to a user."""
+        import time
+
+        # Poll until examples are available (import is async via Celery)
+        for attempt in range(20):
+            r = self.session.get(
+                f"{self.base}/v1/projects/{project_id}/examples",
+                params={"limit": 1},
+            )
+            r.raise_for_status()
+            if r.json()["count"] > 0:
+                break
+            logger.info(
+                "  Waiting for import to complete (attempt %d/20)...", attempt + 1
+            )
+            time.sleep(2)
+        else:
+            logger.warning("  Import may not have completed — assigning anyway.")
+
+        # Now assign all examples
         offset = 0
         assigned = 0
         while True:
@@ -377,6 +396,7 @@ class DoccanoClient:
             if not data["next"]:
                 break
             offset += 100
+
         logger.info("  Assigned %d examples to user_id=%s", assigned, user_id)
         return assigned
 
