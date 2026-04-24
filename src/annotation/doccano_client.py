@@ -36,6 +36,7 @@ class ExportSplitStats(TypedDict):
     overlap: int
     personal: int
     unknown: int
+    skipped: int
 
 
 class DoccanoClient:
@@ -130,7 +131,10 @@ class DoccanoClient:
         for record in records:
             payload = {
                 "text": record["text"],
-                "labels": record["labels"],
+                "label": [
+                    [span["start"], span["end"], span["label"]]
+                    for span in record["labels"]
+                ],
                 "entity_types": record["entity_types"],
                 "entity_count": record["entity_count"],
                 "meta": dict(import_meta),
@@ -181,21 +185,42 @@ class DoccanoClient:
     def export_project_split(
         self,
         project_id: int,
-        overlap_output_path: Path,
-        personal_output_path: Path,
+        overlap_output_path: Path | None,
+        personal_output_path: Path | None,
+        export_scope: str = "both",
     ) -> ExportSplitStats:
         """Export project entries and split them into overlap/personal JSONL files."""
         label_map = self._get_span_type_map(project_id)
 
-        overlap_output_path.parent.mkdir(parents=True, exist_ok=True)
-        personal_output_path.parent.mkdir(parents=True, exist_ok=True)
+        include_overlap = export_scope in {"both", "overlap"}
+        include_personal = export_scope in {"both", "personal"}
+
+        if include_overlap and overlap_output_path is None:
+            raise ValueError("overlap_output_path is required for export_scope='overlap'/'both'")
+        if include_personal and personal_output_path is None:
+            raise ValueError("personal_output_path is required for export_scope='personal'/'both'")
+
+        if overlap_output_path is not None:
+            overlap_output_path.parent.mkdir(parents=True, exist_ok=True)
+        if personal_output_path is not None:
+            personal_output_path.parent.mkdir(parents=True, exist_ok=True)
 
         overlap = 0
         personal = 0
         unknown = 0
+        skipped = 0
 
-        with overlap_output_path.open("w", encoding="utf-8") as overlap_file, \
-            personal_output_path.open("w", encoding="utf-8") as personal_file:
+        overlap_file = (
+            overlap_output_path.open("w", encoding="utf-8")
+            if include_overlap and overlap_output_path is not None
+            else None
+        )
+        personal_file = (
+            personal_output_path.open("w", encoding="utf-8")
+            if include_personal and personal_output_path is not None
+            else None
+        )
+        try:
             for example in self._iter_project_examples(project_id):
                 labels: list[LabelSpan] = []
                 for ann in example["annotations"]:
@@ -217,22 +242,42 @@ class DoccanoClient:
 
                 line_payload = {
                     "text": record["text"],
-                    "labels": record["labels"],
+                    # Keep exported JSONL aligned with Doccano import schema.
+                    "label": [
+                        [span["start"], span["end"], span["label"]]
+                        for span in record["labels"]
+                    ],
                     "entity_types": record["entity_types"],
                     "entity_count": record["entity_count"],
                     "meta": record["meta"],
                 }
                 line = json.dumps(line_payload, ensure_ascii=False) + "\n"
                 if batch == "overlap":
-                    overlap_file.write(line)
-                    overlap += 1
+                    if overlap_file is not None:
+                        overlap_file.write(line)
+                        overlap += 1
+                    else:
+                        skipped += 1
                 elif batch == "personal":
-                    personal_file.write(line)
-                    personal += 1
+                    if personal_file is not None:
+                        personal_file.write(line)
+                        personal += 1
+                    else:
+                        skipped += 1
                 else:
                     unknown += 1
+        finally:
+            if overlap_file is not None:
+                overlap_file.close()
+            if personal_file is not None:
+                personal_file.close()
 
-        return {"overlap": overlap, "personal": personal, "unknown": unknown}
+        return {
+            "overlap": overlap,
+            "personal": personal,
+            "unknown": unknown,
+            "skipped": skipped,
+        }
 
     def _iter_project_examples(
         self,

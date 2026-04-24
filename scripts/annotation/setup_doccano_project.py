@@ -9,6 +9,8 @@ Run this script on YOUR OWN machine after starting Doccano with:
 Usage:
     uv run python scripts/annotation/setup_doccano_project.py --annotator peter
     uv run python scripts/annotation/setup_doccano_project.py --annotator peter --password mypassword
+    uv run python scripts/annotation/setup_doccano_project.py --annotator peter --import-scope overlap
+    uv run python scripts/annotation/setup_doccano_project.py --annotator peter --run-id test01
 """
 
 import argparse
@@ -83,10 +85,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--project-name",
-        default="HP-NER Gold - {annotator}",
+        default="HP-NER Gold - {annotator} - {run_id}",
         help=(
             "Name of the Doccano project to create "
-            "(default: HP-NER Gold - {annotator})"
+            "(default: HP-NER Gold - {annotator} - {run_id})"
         ),
     )
     parser.add_argument(
@@ -95,9 +97,26 @@ def main() -> None:
         help="Annotator name used for <annotator>_unique.jsonl (default: peter)",
     )
     parser.add_argument(
+        "--run-id",
+        default=None,
+        help=(
+            "Optional run identifier appended via {run_id} in project-name "
+            "(default: current timestamp YYYYmmdd_HHMMSS)"
+        ),
+    )
+    parser.add_argument(
         "--overlap-file",
         default="overlap.jsonl",
         help="Overlap JSONL filename to import for all annotators (default: overlap.jsonl)",
+    )
+    parser.add_argument(
+        "--import-scope",
+        choices=("both", "overlap", "personal"),
+        default="both",
+        help=(
+            "Which split(s) to import: both, overlap only, or personal only "
+            "(default: both)"
+        ),
     )
     parser.add_argument(
         "--skip-import",
@@ -105,12 +124,14 @@ def main() -> None:
         help="Create project and labels but skip importing JSONL files",
     )
     args = parser.parse_args()
-    project_name = args.project_name.format(annotator=args.annotator)
+    run_id = args.run_id or time.strftime("%Y%m%d_%H%M%S")
+    project_name = args.project_name.format(annotator=args.annotator, run_id=run_id)
 
-    import_files = [
-        (args.overlap_file, "overlap"),
-        (f"{args.annotator}_unique.jsonl", "personal"),
-    ]
+    import_files = []
+    if args.import_scope in {"both", "overlap"}:
+        import_files.append((args.overlap_file, "overlap"))
+    if args.import_scope in {"both", "personal"}:
+        import_files.append((f"{args.annotator}_unique.jsonl", "personal"))
 
     logger.info("Connecting to Doccano at %s ...", args.base_url)
     client = DoccanoClient(args.base_url, args.username, args.password)
@@ -122,7 +143,7 @@ def main() -> None:
         client.add_label(project_id, label)
 
     if not args.skip_import:
-        logger.info("Importing JSONL files ...")
+        logger.info("Importing JSONL files (scope=%s) ...", args.import_scope)
         for filename, batch in import_files:
             path = args.data_dir / filename
             if not path.exists():
