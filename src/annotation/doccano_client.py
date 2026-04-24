@@ -6,26 +6,47 @@ API notes for this version:
   - NER labels are "span-types", not "labels"
   - CSRF requires both X-CSRFToken header AND Referer header on write requests
   - Import endpoint: v1/projects/{id}/upload
-  - Export endpoint: v1/projects/{id}/download  (async task-based)
+  - Export source endpoint: v1/projects/{id}/examples (paginated)
+  - Label map endpoint: v1/projects/{id}/span-types
 """
 
-from __future__ import annotations
-
 import io
+import json
+import logging
 import time
 import zipfile
 from pathlib import Path
+from typing import Any, Iterator, TypedDict
 
 import requests
+
+from src.annotation.records import read_normalized_jsonl
+from src.annotation.types import AnnotationRecord, LabelSpan
+
+
+logger = logging.getLogger(__name__)
+
+
+class ProjectInfo(TypedDict):
+    id: int
+    name: str
+
+
+class ExportSplitStats(TypedDict):
+    overlap: int
+    personal: int
+    unknown: int
 
 
 class DoccanoClient:
     def __init__(self, base_url: str, username: str, password: str) -> None:
+        """Initialize Doccano client, establish session and authenticate."""
         self.base = base_url.rstrip("/")
         self.session = requests.Session()
         self._login(username, password)
 
     def _login(self, username: str, password: str) -> None:
+        """Authenticate and store token + CSRF for subsequent requests."""
         resp = self.session.post(
             f"{self.base}/v1/auth/login/",
             json={"username": username, "password": password},
@@ -41,11 +62,13 @@ class DoccanoClient:
                 "Referer": f"{self.base}/",
             }
         )
-        print("Authenticated.")
-
-    # ── project management ──────────────────────────────────────────────────
+        logger.info("Authenticated.")
 
     def create_project(self, name: str) -> int:
+        """Create a new Doccano project with the given name and return its ID.
+        
+        It is used to upload annotation batches for each annotator.
+        """
         resp = self.session.post(
             f"{self.base}/v1/projects",
             json={
@@ -60,38 +83,80 @@ class DoccanoClient:
         )
         resp.raise_for_status()
         project_id: int = resp.json()["id"]
-        print(f"Created project '{name}' (id={project_id})")
+        logger.info("Created project '%s' (id=%s)", name, project_id)
         return project_id
 
-    def list_projects(self) -> list[dict]:
+    def list_projects(self) -> list[ProjectInfo]:
         resp = self.session.get(
             f"{self.base}/v1/projects",
             headers={"Accept": "application/json"},
         )
         resp.raise_for_status()
-        data = resp.json()
-        return data.get("results", data) if isinstance(data, dict) else data
-
-    # ── label management ────────────────────────────────────────────────────
+        projects = resp.json()["results"]
+        return [
+            {"id": int(p["id"]), "name": str(p["name"])}
+            for p in projects
+        ]
 
     def add_label(self, project_id: int, label: dict) -> None:
+        """Add one NER label (span-type) to the project.
+        
+        Label dict example:
+        {
+            "text": "Spell",
+            "suffix_key": "s",
+            "background_color": "#E53935",
+            "text_color": "#ffffff",
+        }
+        """
         # In this Doccano version, NER labels are "span-types"
         resp = self.session.post(
             f"{self.base}/v1/projects/{project_id}/span-types",
             json=label,
         )
         resp.raise_for_status()
-        print(f"  + label: {label['text']} (key: {label['suffix_key']})")
+        logger.info("  + label: %s (key: %s)", label["text"], label["suffix_key"])
 
-    # ── dataset import / export ─────────────────────────────────────────────
+    def import_jsonl(
+        self,
+        project_id: int,
+        filepath: Path,
+        import_meta: dict[str, Any],
+    ) -> None:
+        """Import a JSONL file and set required metadata for each record."""
+        records = read_normalized_jsonl(filepath)
 
-    def import_jsonl(self, project_id: int, filepath: Path) -> None:
+        payload_lines = []
+        for record in records:
+            payload = {
+                "text": record["text"],
+                "labels": record["labels"],
+                "entity_types": record["entity_types"],
+                "entity_count": record["entity_count"],
+                "meta": dict(import_meta),
+            }
+            payload_lines.append(json.dumps(payload, ensure_ascii=False))
+
+        payload_text = "\n".join(payload_lines) + "\n"
+        if logger.isEnabledFor(logging.DEBUG):
+            preview = payload_text
+            if len(preview) > 4000:
+                preview = preview[:4000] + "\n... [truncated]"
+            logger.debug("Import JSONL payload preview for %s:\n%s", filepath.name, preview)
+
+        payload_bytes = payload_text.encode("utf-8")
+
         # Step 1: upload file via filepond to get a temporary upload ID
-        with filepath.open("rb") as f:
-            up = self.session.post(
-                f"{self.base}/v1/fp/process/",
-                files={"filepond": (filepath.name, f, "application/octet-stream")},
-            )
+        up = self.session.post(
+            f"{self.base}/v1/fp/process/",
+            files={
+                "filepond": (
+                    filepath.name,
+                    io.BytesIO(payload_bytes),
+                    "application/jsonl",
+                )
+            },
+        )
         up.raise_for_status()
         upload_id = up.text.strip()  # filepond returns the ID as plain text
 
@@ -106,55 +171,101 @@ class DoccanoClient:
         )
         resp.raise_for_status()
         task_id = resp.json().get("task_id")
-        print(f"  Import queued: {filepath.name} (task={task_id})")
-
-    def export_project(self, project_id: int, output_path: Path) -> None:
-        """Export project annotations as JSONL (async task-based)."""
-        resp = self.session.post(
-            f"{self.base}/v1/projects/{project_id}/download",
-            json={"format": "JSONL", "exportApproved": False},
+        logger.info(
+            "  Import queued: %s (%s records, task=%s)",
+            filepath.name,
+            len(records),
+            task_id,
         )
-        resp.raise_for_status()
-        payload = resp.json()
-        task_id = payload.get("task_id") or payload.get("id")
-        if not task_id:
-            raise RuntimeError(f"No task id in download response: {payload}")
-        self._poll_and_download(project_id, task_id, output_path)
 
-    def _poll_and_download(
-        self, project_id: int, task_id: str, output_path: Path
-    ) -> None:
-        for attempt in range(30):
-            # Poll uses camelCase taskId param; returns file bytes when ready
+    def export_project_split(
+        self,
+        project_id: int,
+        overlap_output_path: Path,
+        personal_output_path: Path,
+    ) -> ExportSplitStats:
+        """Export project entries and split them into overlap/personal JSONL files."""
+        label_map = self._get_span_type_map(project_id)
+
+        overlap_output_path.parent.mkdir(parents=True, exist_ok=True)
+        personal_output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        overlap = 0
+        personal = 0
+        unknown = 0
+
+        with overlap_output_path.open("w", encoding="utf-8") as overlap_file, \
+            personal_output_path.open("w", encoding="utf-8") as personal_file:
+            for example in self._iter_project_examples(project_id):
+                labels: list[LabelSpan] = []
+                for ann in example["annotations"]:
+                    start = int(ann["start_offset"])
+                    end = int(ann["end_offset"])
+                    label = label_map.get(int(ann["label"]), str(ann["label"]))
+                    labels.append({"start": start, "end": end, "label": label})
+                labels.sort(key=lambda x: (x["start"], x["end"], x["label"]))
+
+                record: AnnotationRecord = {
+                    "text": str(example["text"]),
+                    "labels": labels,
+                    "entity_types": sorted({span["label"] for span in labels}),
+                    "entity_count": len(labels),
+                    "meta": {**example.get("meta", {})},
+                }
+                
+                batch = str(record["meta"].get("batch", "")).strip().lower()
+
+                line_payload = {
+                    "text": record["text"],
+                    "labels": record["labels"],
+                    "entity_types": record["entity_types"],
+                    "entity_count": record["entity_count"],
+                    "meta": record["meta"],
+                }
+                line = json.dumps(line_payload, ensure_ascii=False) + "\n"
+                if batch == "overlap":
+                    overlap_file.write(line)
+                    overlap += 1
+                elif batch == "personal":
+                    personal_file.write(line)
+                    personal += 1
+                else:
+                    unknown += 1
+
+        return {"overlap": overlap, "personal": personal, "unknown": unknown}
+
+    def _iter_project_examples(
+        self,
+        project_id: int,
+        limit: int = 1000,
+    ) -> Iterator[dict[str, Any]]:
+        """Iterate over all examples (each dataset row) in the project, handling pagination."""
+        offset = 0
+
+        while True:
             resp = self.session.get(
-                f"{self.base}/v1/projects/{project_id}/download",
-                params={"taskId": task_id},
+                f"{self.base}/v1/projects/{project_id}/examples",
+                params={"limit": limit, "offset": offset},
+                headers={"Accept": "application/json"},
             )
             resp.raise_for_status()
+            batch = resp.json()["results"]
+            if not batch:
+                break
+            for item in batch:
+                yield item
+            offset += len(batch)
+            if len(batch) < limit:
+                break
 
-            content_type = resp.headers.get("Content-Type", "")
-            if "application/json" in content_type:
-                # Still processing — {"status": "Not ready"} or similar
-                print(
-                    f"  Export task {task_id}: not ready (attempt {attempt + 1}/30) ..."
-                )
-                time.sleep(3)
-                continue
-
-            # File returned directly once the Celery task completes.
-            # Doccano wraps the JSONL in a zip archive.
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            if zipfile.is_zipfile(io.BytesIO(resp.content)):
-                with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                    jsonl_names = [n for n in zf.namelist() if n.endswith(".jsonl")]
-                    if not jsonl_names:
-                        raise RuntimeError(
-                            f"No .jsonl file found in export zip: {zf.namelist()}"
-                        )
-                    output_path.write_bytes(zf.read(jsonl_names[0]))
-            else:
-                output_path.write_bytes(resp.content)
-            print(f"  Downloaded -> {output_path}")
-            return
-
-        raise TimeoutError(f"Export task {task_id} did not finish within 90 seconds.")
+    def _get_span_type_map(self, project_id: int) -> dict[int, str]:
+        """Fetch the mapping of span-type IDs to their text labels for the given project."""
+        resp = self.session.get(
+            f"{self.base}/v1/projects/{project_id}/span-types",
+            headers={"Accept": "application/json"},
+        )
+        resp.raise_for_status()
+        label_map: dict[int, str] = {}
+        for item in resp.json()["results"]:
+            label_map[int(item["id"])] = str(item["text"])
+        return label_map
