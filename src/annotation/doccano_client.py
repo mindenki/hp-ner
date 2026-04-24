@@ -357,6 +357,29 @@ class DoccanoClient:
             "  Added user_id=%s to project %s as '%s'", user_id, project_id, role
         )
 
+    def assign_examples_to_user(self, project_id: int, user_id: int) -> int:
+        """Assign all examples in a project to a specific user."""
+        offset = 0
+        assigned = 0
+        while True:
+            r = self.session.get(
+                f"{self.base}/v1/projects/{project_id}/examples",
+                params={"limit": 100, "offset": offset},
+            )
+            r.raise_for_status()
+            data = r.json()
+            for example in data["results"]:
+                self.session.post(
+                    f"{self.base}/v1/projects/{project_id}/assignments",
+                    json={"example": example["id"], "assignee": user_id},
+                ).raise_for_status()
+                assigned += 1
+            if not data["next"]:
+                break
+            offset += 100
+        logger.info("  Assigned %d examples to user_id=%s", assigned, user_id)
+        return assigned
+
     def create_user(self, username: str, email: str, password: str) -> int:
         """Register a new Doccano user and return their user ID."""
         resp = self.session.post(

@@ -238,6 +238,10 @@ def main() -> None:
                 )
                 time.sleep(0.5)
 
+            if user_id is not None:
+                logger.info("  Assigning examples to %s ...", username)
+                client.assign_examples_to_user(project_id, user_id)
+
     logger.info("=== Done ===")
     logger.info("Share this URL with your team: %s", args.base_url)
     logger.info(
