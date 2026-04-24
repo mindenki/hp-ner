@@ -1,22 +1,34 @@
 """Export per-annotator JSONL annotations from Doccano via REST API.
 
-Lists all projects in the Doccano instance and exports each as a JSONL file to
-data/annotated/. Handles both synchronous (older Doccano) and async (newer Doccano)
-export APIs.
+Lists projects in the Doccano instance and exports each as JSONL files split into:
+    - <project>_overlap.jsonl  (for inter-annotator agreement)
+    - <project>_personal.jsonl (annotator-unique sentences)
+
+Separation is based on metadata added during import:
+    meta.batch = "overlap" or "personal"
 
 Usage:
-    uv run python scripts/export_annotations.py
-    uv run python scripts/export_annotations.py --project-ids 1 2
+    uv run python scripts/annotation/export_annotations.py
+    uv run python scripts/annotation/export_annotations.py --project-ids 1 2
 """
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
 from src.annotation.doccano_client import DoccanoClient
 
 
+logger = logging.getLogger(__name__)
+
+
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(message)s",
+    )
+
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -47,18 +59,38 @@ def main() -> None:
         projects = [p for p in projects if p["id"] in args.project_ids]
 
     if not projects:
-        print("No projects found. Have you set up Doccano yet?")
+        logger.error(
+            "No projects found. Set up and import a project first, e.g.: "
+            "uv run python scripts/annotation/setup_doccano_project.py --annotator peter"
+        )
         sys.exit(1)
 
     for project in projects:
         pid = project["id"]
         safe_name = project["name"].lower().replace(" ", "_").replace("/", "-")
-        output_path = args.output_dir / f"{safe_name}_export.jsonl"
-        print(f"Exporting project '{project['name']}' (id={pid}) ...")
-        client.export_project(pid, output_path)
+        
+        overlap_path = args.output_dir / f"{safe_name}_overlap.jsonl"
+        personal_path = args.output_dir / f"{safe_name}_personal.jsonl"
+        
+        logger.info("Exporting project '%s' (id=%s) ...", project["name"], pid)
+        stats = client.export_project_split(pid, overlap_path, personal_path)
 
-    print(f"\nAll exports written to {args.output_dir}/")
-    print("Next: run merge_annotations.py to combine into a gold corpus.")
+        logger.info(
+            "  Split exported records -> overlap: %s, personal: %s",
+            stats["overlap"],
+            stats["personal"],
+        )
+        if stats["unknown"]:
+            logger.warning(
+                "  %s records missing meta.batch; re-run setup/import with updated script "
+                "to preserve split metadata.",
+                stats["unknown"],
+            )
+
+    logger.info("All exports written to %s/", args.output_dir)
+    logger.info(
+        "Next: run scripts/postprocess/prepare_bert_split.py to build train/dev/test IOB2 files."
+    )
 
 
 if __name__ == "__main__":
