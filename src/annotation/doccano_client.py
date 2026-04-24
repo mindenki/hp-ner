@@ -83,6 +83,7 @@ class DoccanoClient:
                 "resourcetype": "SequenceLabelingProject",
                 "description": "HP-NER gold annotation — Harry Potter Named Entity Recognition",
                 "guideline": "See doccano/README.md for annotation guidelines.",
+                "collaborative_annotation": True,
                 "allow_overlapping": False,
                 "tags": [],
             },
