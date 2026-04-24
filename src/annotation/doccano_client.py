@@ -13,8 +13,6 @@ API notes for this version:
 import io
 import json
 import logging
-import time
-import zipfile
 from pathlib import Path
 from typing import Any, Iterator, TypedDict
 
@@ -67,7 +65,7 @@ class DoccanoClient:
 
     def create_project(self, name: str) -> int:
         """Create a new Doccano project with the given name and return its ID.
-        
+
         It is used to upload annotation batches for each annotator.
         """
         resp = self.session.post(
@@ -94,14 +92,11 @@ class DoccanoClient:
         )
         resp.raise_for_status()
         projects = resp.json()["results"]
-        return [
-            {"id": int(p["id"]), "name": str(p["name"])}
-            for p in projects
-        ]
+        return [{"id": int(p["id"]), "name": str(p["name"])} for p in projects]
 
     def add_label(self, project_id: int, label: dict) -> None:
         """Add one NER label (span-type) to the project.
-        
+
         Label dict example:
         {
             "text": "Spell",
@@ -146,7 +141,9 @@ class DoccanoClient:
             preview = payload_text
             if len(preview) > 4000:
                 preview = preview[:4000] + "\n... [truncated]"
-            logger.debug("Import JSONL payload preview for %s:\n%s", filepath.name, preview)
+            logger.debug(
+                "Import JSONL payload preview for %s:\n%s", filepath.name, preview
+            )
 
         payload_bytes = payload_text.encode("utf-8")
 
@@ -196,9 +193,13 @@ class DoccanoClient:
         include_personal = export_scope in {"both", "personal"}
 
         if include_overlap and overlap_output_path is None:
-            raise ValueError("overlap_output_path is required for export_scope='overlap'/'both'")
+            raise ValueError(
+                "overlap_output_path is required for export_scope='overlap'/'both'"
+            )
         if include_personal and personal_output_path is None:
-            raise ValueError("personal_output_path is required for export_scope='personal'/'both'")
+            raise ValueError(
+                "personal_output_path is required for export_scope='personal'/'both'"
+            )
 
         if overlap_output_path is not None:
             overlap_output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -237,7 +238,7 @@ class DoccanoClient:
                     "entity_count": len(labels),
                     "meta": {**example.get("meta", {})},
                 }
-                
+
                 batch = str(record["meta"].get("batch", "")).strip().lower()
 
                 line_payload = {
@@ -314,3 +315,70 @@ class DoccanoClient:
         for item in resp.json()["results"]:
             label_map[int(item["id"])] = str(item["text"])
         return label_map
+
+    def list_users(self) -> list[dict]:
+        """Return all Doccano users visible to the admin account.
+
+        Each entry has at least 'id' and 'username'.
+        Requires admin privileges.
+        """
+        resp = self.session.get(
+            f"{self.base}/v1/users",
+            headers={"Accept": "application/json"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        # Response may be paginated or a plain list depending on Doccano version
+        if isinstance(data, list):
+            return data
+        return data.get("results", data)
+
+    def add_project_member(
+        self,
+        project_id: int,
+        user_id: int,
+        role: str = "annotator",
+    ) -> None:
+        """Add a user as a member of a project with the given role.
+
+        Roles: 'project_admin', 'annotator', 'approver'
+        """
+        resp = self.session.post(
+            f"{self.base}/v1/projects/{project_id}/members",
+            json={"user": user_id, "role": role},
+        )
+        resp.raise_for_status()
+        logger.info(
+            "  Added user id=%s as '%s' to project id=%s",
+            user_id,
+            role,
+            project_id,
+        )
+
+    def create_user(self, username: str, email: str, password: str) -> int:
+        """Register a new Doccano user and return their user ID."""
+        resp = self.session.post(
+            f"{self.base}/v1/auth/registration/",
+            json={
+                "username": username,
+                "email": email,
+                "password1": password,
+                "password2": password,
+            },
+        )
+        resp.raise_for_status()
+        logger.info("Created user '%s'", username)
+        # Registration returns the token, not the user id — fetch it separately
+        return self._get_user_id(username)
+
+    def _get_user_id(self, username: str) -> int:
+        """Return the Doccano user ID for the given username."""
+        resp = self.session.get(
+            f"{self.base}/v1/users",
+            headers={"Accept": "application/json"},
+        )
+        resp.raise_for_status()
+        for user in resp.json():
+            if user["username"] == username:
+                return int(user["id"])
+        raise ValueError(f"User '{username}' not found after creation")
