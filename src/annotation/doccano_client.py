@@ -319,8 +319,12 @@ class DoccanoClient:
             headers={"Accept": "application/json"},
         )
         resp.raise_for_status()
+        data = resp.json()
+        # Doccano can return either a paginated object ({"results": [...]})
+        # or a plain list depending on version/configuration.
+        items = data.get("results", []) if isinstance(data, dict) else data
         label_map: dict[int, str] = {}
-        for item in resp.json()["results"]:
+        for item in items:
             label_map[int(item["id"])] = str(item["text"])
         return label_map
 
