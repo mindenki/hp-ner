@@ -232,11 +232,29 @@ class DoccanoClient:
         try:
             for example in self._iter_project_examples(project_id):
                 labels: list[LabelSpan] = []
-                for ann in example["annotations"]:
-                    start = int(ann["start_offset"])
-                    end = int(ann["end_offset"])
-                    label = label_map.get(int(ann["label"]), str(ann["label"]))
-                    labels.append({"start": start, "end": end, "label": label})
+                annotations = example.get("annotations")
+                if annotations is None:
+                    example_id = example.get("id")
+                    if example_id is not None:
+                        annotations = self._get_example_annotations(
+                            project_id, int(example_id)
+                        )
+                    else:
+                        annotations = []
+
+                for ann in annotations:
+                    start = ann.get("start_offset", ann.get("start"))
+                    end = ann.get("end_offset", ann.get("end"))
+                    raw_label = ann.get("label")
+                    if start is None or end is None or raw_label is None:
+                        continue
+
+                    label_id = raw_label.get("id") if isinstance(raw_label, dict) else raw_label
+                    try:
+                        label = label_map.get(int(label_id), str(label_id))
+                    except (TypeError, ValueError):
+                        label = str(label_id)
+                    labels.append({"start": int(start), "end": int(end), "label": label})
                 labels.sort(key=lambda x: (x["start"], x["end"], x["label"]))
 
                 record: AnnotationRecord = {
@@ -303,7 +321,7 @@ class DoccanoClient:
                 headers={"Accept": "application/json"},
             )
             resp.raise_for_status()
-            batch = resp.json()["results"]
+            batch = self._coerce_results(resp.json())
             if not batch:
                 break
             for item in batch:
@@ -311,6 +329,29 @@ class DoccanoClient:
             offset += len(batch)
             if len(batch) < limit:
                 break
+
+    def _get_example_annotations(
+        self,
+        project_id: int,
+        example_id: int,
+    ) -> list[dict[str, Any]]:
+        """Fetch annotations for one example, handling list/paginated response shapes."""
+        resp = self.session.get(
+            f"{self.base}/v1/projects/{project_id}/examples/{example_id}/annotations",
+            headers={"Accept": "application/json"},
+        )
+        resp.raise_for_status()
+        data = self._coerce_results(resp.json())
+        return [item for item in data if isinstance(item, dict)]
+
+    def _coerce_results(self, payload: Any) -> list[Any]:
+        """Normalize Doccano payloads that may be paginated objects or plain lists."""
+        if isinstance(payload, list):
+            return payload
+        if isinstance(payload, dict):
+            results = payload.get("results", [])
+            return results if isinstance(results, list) else []
+        return []
 
     def _get_span_type_map(self, project_id: int) -> dict[int, str]:
         """Fetch the mapping of span-type IDs to their text labels for the given project."""
