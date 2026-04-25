@@ -6,6 +6,7 @@ It will:
   2. Create one Doccano project per annotator
   3. Add the annotator as a member of their project
   4. Import overlap + personal JSONL batches into each project
+  5. Assign examples to each annotator (after all imports are queued)
 
 Prerequisites:
   - Doccano is running on the target machine (docker compose up -d)
@@ -143,39 +144,22 @@ def main() -> None:
     parser.add_argument("--ssh-host", default=None)
     parser.add_argument("--ssh-user", default="azureuser")
     parser.add_argument("--container-name", default="doccano")
-    parser.add_argument(
-        "--local",
-        action="store_true",
-        help="Run docker exec locally (no SSH).",
-    )
-    parser.add_argument(
-        "--data-dir",
-        type=Path,
-        default=Path("data/selected/gold"),
-    )
+    parser.add_argument("--local", action="store_true")
+    parser.add_argument("--data-dir", type=Path, default=Path("data/selected/gold"))
     parser.add_argument("--overlap-file", default="overlap.jsonl")
     parser.add_argument(
         "--import-scope",
         choices=("both", "overlap", "personal"),
         default="both",
-        help="Which batches to import: both, overlap only, or personal only (default: both)",
     )
-    parser.add_argument(
-        "--skip-users",
-        action="store_true",
-        help="Skip user creation (if accounts already exist)",
-    )
-    parser.add_argument(
-        "--skip-import",
-        action="store_true",
-        help="Create projects and members but skip JSONL import",
-    )
+    parser.add_argument("--skip-users", action="store_true")
+    parser.add_argument("--skip-import", action="store_true")
     parser.add_argument("--run-id", default=None)
     args = parser.parse_args()
 
     run_id = args.run_id or time.strftime("%Y%m%d_%H%M%S")
 
-    # ── Step 1: Create user accounts ─────────────────────────────────────────
+    # ── Step 1: Create user accounts ──────────────────────────────────────────
     if not args.skip_users:
         logger.info("=== Step 1: Creating annotator user accounts ===")
         for ann in ANNOTATORS:
@@ -191,7 +175,7 @@ def main() -> None:
     else:
         logger.info("=== Step 1: Skipping user creation (--skip-users) ===")
 
-    # ── Step 2: Connect to Doccano API ────────────────────────────────────────
+    # ── Step 2: Connect to Doccano API ─────────────────────────────────────────
     logger.info("=== Step 2: Connecting to Doccano at %s ===", args.base_url)
     client = DoccanoClient(args.base_url, args.admin_username, args.admin_password)
 
@@ -199,8 +183,11 @@ def main() -> None:
     user_id_map = {u["username"]: u["id"] for u in users}
     logger.info("Found %d users: %s", len(users), list(user_id_map.keys()))
 
-    # ── Step 3: Create one project per annotator ──────────────────────────────
-    logger.info("=== Step 3: Creating projects and importing data ===")
+    # ── Step 3: Create projects, labels, members, queue imports ───────────────
+    # Keep track of (project_id, user_id) for the assignment pass below.
+    logger.info("=== Step 3: Creating projects and queueing imports ===")
+    project_assignments: list[tuple[int, int]] = []  # (project_id, user_id)
+
     for ann in ANNOTATORS:
         username = ann["username"]
         project_name = f"HP-NER Gold - {username} - {run_id}"
@@ -218,7 +205,6 @@ def main() -> None:
         else:
             client.add_project_member(project_id, user_id, role="annotator")
 
-        # ── Import based on --import-scope ────────────────────────────────────
         if not args.skip_import:
             import_files = []
             if args.import_scope in ("both", "overlap"):
@@ -239,8 +225,34 @@ def main() -> None:
                 time.sleep(0.5)
 
             if user_id is not None:
-                logger.info("  Assigning examples to %s ...", username)
-                client.assign_examples_to_user(project_id, user_id)
+                project_assignments.append((project_id, user_id))
+
+    # ── Step 4: Wait for Celery to finish, then assign examples ───────────────
+    # All imports are now queued. Wait here so Celery has time to process
+    # all of them before we start assigning — avoids the race condition where
+    # assign_examples_to_user runs before the import task completes.
+    if project_assignments:
+        logger.info("=== Step 4: Waiting for imports to complete ===")
+        logger.info("  Waiting 10s for Celery to process all import tasks ...")
+        time.sleep(10)
+
+        logger.info("=== Step 5: Assigning examples to annotators ===")
+        for project_id, user_id in project_assignments:
+            username = next(
+                ann["username"]
+                for ann in ANNOTATORS
+                if user_id_map.get(ann["username"]) == user_id
+            )
+            logger.info(
+                "  Assigning examples to %s (project %s) ...", username, project_id
+            )
+            assigned = client.assign_examples_to_user(project_id, user_id)
+            if assigned == 0:
+                logger.warning(
+                    "  Still 0 examples for project %s — import may have failed. "
+                    "Check: docker logs doccano --tail 20",
+                    project_id,
+                )
 
     logger.info("=== Done ===")
     logger.info("Share this URL with your team: %s", args.base_url)
