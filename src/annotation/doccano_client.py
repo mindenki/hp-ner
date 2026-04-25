@@ -358,10 +358,17 @@ class DoccanoClient:
         )
 
     def assign_examples_to_user(self, project_id: int, user_id: int) -> int:
-        """Assign all examples in a project to a specific user.
+        """Assign all examples in a project to a specific user, skipping existing assignments."""
+        # Fetch already-assigned example IDs to avoid 400 on duplicates
+        existing = set()
+        r = self.session.get(
+            f"{self.base}/v1/projects/{project_id}/assignments",
+            params={"limit": 1000},
+        )
+        r.raise_for_status()
+        for a in r.json()["results"]:
+            existing.add(a["example"])
 
-        Call this after imports have completed (not immediately after queuing).
-        """
         offset = 0
         assigned = 0
         while True:
@@ -372,11 +379,12 @@ class DoccanoClient:
             r.raise_for_status()
             data = r.json()
             for example in data["results"]:
-                self.session.post(
-                    f"{self.base}/v1/projects/{project_id}/assignments",
-                    json={"example": example["id"], "assignee": user_id},
-                ).raise_for_status()
-                assigned += 1
+                if example["id"] not in existing:
+                    self.session.post(
+                        f"{self.base}/v1/projects/{project_id}/assignments",
+                        json={"example": example["id"], "assignee": user_id},
+                    ).raise_for_status()
+                    assigned += 1
             if not data["next"]:
                 break
             offset += 100
