@@ -2,7 +2,7 @@
 Dict file writer.
 
 Reads canonical + alias names and writes one .txt file for each 6 labels, with one name per line, in the format
-expected by enity_dict.py:
+expected by entity_dict.py:
         Harry Potter
         >The Boy Who Lived
         >The Chosen One

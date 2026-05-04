@@ -1,10 +1,10 @@
 """ 
 
-SHared tokenizer for silver labeling, that will be used by both our model and the dictionary-based silver labeling. 
+Shared tokenizer for silver labeling, that will be used by both our model and the dictionary-based silver labeling. 
 
-spaCy will handle punctuation splitting cleanly which will help the dict matchings.
+spaCy will handle punctuation splitting cleanly which will help the dict matches.
 
-Both taggers receive the same tokenizations, and later on will be be merged in a simple zip.
+Both taggers receive the same tokenizations, and later on will be merged in a simple zip.
 
 """
 
@@ -14,7 +14,7 @@ import logging
 import spacy
 from spacy.cli import download as spacy_download
 
-from functools import lru_cache
+
 
 logger = logging.getLogger(__name__)
 

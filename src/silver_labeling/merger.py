@@ -3,7 +3,7 @@
     PRESEDENCE RULES:
         - SPELL/ARTIFACT/CREATURE  -> dict always wins as BERT cannot predict these
         - CHARACTER/LOCATION/ORGANIZATION -> if one labels as entity, the other does not -> take the entity label
-        Conflict(same span, different entity) -> dict wins
+        Conflict(same span, different entity) -> bert wins
         
 silver_source tracks per-token provenance: 'dict', 'bert', 'both or 'O'.
 
@@ -76,7 +76,7 @@ def merge(dict_tags: list[str], bert_tags: list[str], conflict_counts: dict[str,
         
         else:
             number_of_conflicts += 1
-            conflict_counts[f"{b_label}->{d_label}"] += 1
+            conflict_counts[f"{b_label}->{d_label}"] = conflict_counts.get(f"{b_label}->{d_label}", 0) + 1
             merged.append(b_tag)
             sources.append("bert")
             

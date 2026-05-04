@@ -22,7 +22,7 @@ class WikiScraper:
         self.base_urls: list[str] = base_urls #the starting pages of the scraping
         self.home_url: str = home_url #the name of the home page, important for link extraction
         self.depth: int = depth #for recursion - makes sure we only scrape relevant pages
-        self.headers: dict[str:str] = headers #to avoid being treated as robots: we pretend we are using a browser instead of scraping
+        self.headers: dict[str, str] = headers #to avoid being treated as robots: we pretend we are using a browser instead of scraping
         self.delay_time: float = delay_time #to avoid being treated as robots:we take small pauses so that we stay within server limits
         self.output_file: str = output_file #name of the output file to be created later
 

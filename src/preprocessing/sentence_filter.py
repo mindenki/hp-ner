@@ -69,7 +69,10 @@ def deduplicate_sentences(sentences: list[str], threshold: float = 0.8) -> list[
     return deduplicated
 
 
-def filter_dataset(input_path, output_path, nlp = spacy.blank("en"), lsh = MinHashLSH(threshold=0.8, num_perm=128)):
+def filter_dataset(input_path, output_path, nlp = None, lsh = None):
+    
+    nlp = spacy.blank("en")
+    lsh = MinHashLSH(threshold=0.8, num_perm=128)
     try:
         records = load_jsonl(input_path)
     except FileNotFoundError:

@@ -153,8 +153,3 @@ class BertTagger:
         
         
         return all_tags
-                
-        
-
-        
-print("hello cat!bongo cat ! :Ö")

@@ -3,10 +3,10 @@ Selects ~1,250 sentences from the 15k corpus for human annotation
 using a 4-bucket strategy, plus an overlap set for IAA.
 
 Buckets:
-    A — High-confidence silver labels(meaning has no conflict and at least one label agreement)  (375 sentences)
+    A — High-confidence silver labels(meaning has no conflict and at least one label agreement)  (125 sentences)
     B — Rare entity types (SPELL, CREA, ARTI) being dominant label         (375 sentences)
     C — BERT/dict conflict              (375 sentences)
-    D — Multi-type sentences            (125 sentences)
+    D — Multi-type sentences            (375 sentences)
     Overlap set (15% of total, ~188)    drawn from B + C + D
 
 Usage (from project root):
