@@ -89,7 +89,11 @@ class WikiScraper:
 
         #identiy and remove content we do not need
         if content:
-            junk: list[str] = ['aside.portable-infobox', 'div.toc', 'table', 'span.mw-editsection', 'sup.reference', 'div.printfooter', 'div.wds-tabber', 'nav', '.quote', '.featured-quote-container', '.gallery']
+            junk: list[str] = ['aside.portable-infobox', 'div.toc', 'table', 'span.mw-editsection',
+                                'sup.reference', 'div.printfooter'
+                                , 'div.wds-tabber', 'nav', '.quote', 
+                                '.featured-quote-container', '.gallery',
+                                'div.thumbcaption', 'div.mw-caption', 'figcaption'] 
             for j in junk:
                 for d in content.select(j): 
                     d.decompose()
