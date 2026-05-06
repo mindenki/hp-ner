@@ -4,6 +4,7 @@ import requests
 from urllib.parse import urljoin
 import json
 import logging
+import random
 logger = logging.getLogger("SimpleLogger")
 
 REAL_WORLD_CATEGORY_KEYWORDS = [
@@ -11,14 +12,10 @@ REAL_WORLD_CATEGORY_KEYWORDS = [
     'actresses', 'video games', 'soundtracks', 'video game', 'soundtrack', 'tv', 'tv series', 'tv show',
     'production', 'adaptations', 'adaptation', 'media', 'media adaptations', 'real-life', 'real life', 'real people', 'real person', 'real-world', 'real world'
 ]
-
-def is_real_world(categories: list[str]) -> bool:
-    """ Returns True if any category contains keywords indicating the page is about real-world media or people. """
-    return any(
-        any(k in c for k in REAL_WORLD_CATEGORY_KEYWORDS)
-        for c in categories
-    )
     
+def is_real_world_page(soup: BS) -> bool:
+    text = soup.get_text(separator=" ", strip=True).lower()
+    return "not part of the harry potter universe" in text
 def is_valid_title(title: str) -> bool:
     '''
     Filters out pages that are likely real-world / production-related
@@ -47,7 +44,7 @@ class WikiScraper:
         self.home_url: str = home_url #the name of the home page, important for link extraction
         self.depth: int = depth #for recursion - makes sure we only scrape relevant pages
         self.headers: dict[str, str] = headers #to avoid being treated as robots: we pretend we are using a browser instead of scraping
-        self.delay_time: float = delay_time #to avoid being treated as robots:we take small pauses so that we stay within server limits
+        self.delay_time: float = random.randint(0, 2) #to avoid being treated as robots:we take small pauses so that we stay within server limits
         self.output_file: str = output_file #name of the output file to be created later
 
         self.visited: set[str]= set() #we keep track of visited urls to avoid infinite loops (recursion)
@@ -74,7 +71,7 @@ class WikiScraper:
             return None
             
         
-    def parser(self, url: str, html_text: str) -> tuple[str, str, BS | None, list[str]]: 
+    def parser(self, url: str, html_text: str) -> tuple[str, str, BS | None, BS]: 
         '''
         Parses raw HTML into a structured BeautifulSoup object.
         Extracts the page title from the first <h1> tag and the main content
@@ -98,14 +95,7 @@ class WikiScraper:
                 for d in content.select(j): 
                     d.decompose()
         
-        categories = []
-        cat_container = soup.select('#mw-normal-catlinks a')
-        for c in cat_container:
-            text = c.get_text(strip=True).lower()
-            if text != "categories":  # skip header link
-                categories.append(text)
-                
-        return url, title, content, categories
+        return url, title, content, soup
 
     #time to 'crawl'
     def extract_links(self, cleaned_content: BS) -> list[str]:
@@ -175,11 +165,14 @@ class WikiScraper:
             if current_depth >= 0:
                 raw_html: str | None = self.fetch_html(link)
                 if raw_html is None:
+                    logger.error(f"Failed to fetch {link}, skipping.")
                     return
-                link, title, parsed_text, categories = self.parser(link, raw_html)
+                link, title, parsed_text, soup= self.parser(link, raw_html)
+                if is_real_world_page(soup):
+                    logger.info(f"Skipping {link} because it appears to be a real-world page based on content.")
+                    return
                 if not is_valid_title(title):
-                    return
-                if is_real_world(categories):
+                    logger.info(f"Skipping {link} due to title '{title}' indicating real-world content.")
                     return
                 self.visited.add(link) 
                 if parsed_text is not None:
