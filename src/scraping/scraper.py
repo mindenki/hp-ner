@@ -6,6 +6,30 @@ import json
 import logging
 logger = logging.getLogger("SimpleLogger")
 
+REAL_WORLD_CATEGORY_KEYWORDS = [
+    'films', 'film', 'film series', 'actors', 'actor', 'actress', 'Fandom', 'fandom', 'book series', 'comic series', 
+    'actresses', 'video games', 'soundtracks', 'video game', 'soundtrack', 'tv', 'tv series', 'tv show',
+    'production', 'adaptations', 'adaptation', 'media', 'media adaptations', 'real-life', 'real life', 'real people', 'real person', 'real-world', 'real world'
+]
+
+def is_real_world(categories: list[str]) -> bool:
+    """ Returns True if any category contains keywords indicating the page is about real-world media or people. """
+    return any(
+        any(k in c for k in REAL_WORLD_CATEGORY_KEYWORDS)
+        for c in categories
+    )
+    
+def is_valid_title(title: str) -> bool:
+    '''
+    Filters out pages that are likely real-world / production-related
+    rather than in-universe Harry Potter content.
+    '''
+
+
+    title_lower = title.lower()
+
+    return not any(keyword in title_lower for keyword in REAL_WORLD_CATEGORY_KEYWORDS)
+
 class WikiScraper:
     '''
     A web scraper for Wiki-based websites.
@@ -50,7 +74,7 @@ class WikiScraper:
             return None
             
         
-    def parser(self, url: str, html_text: str) -> tuple[str, str, BS | None]: 
+    def parser(self, url: str, html_text: str) -> tuple[str, str, BS | None, list[str]]: 
         '''
         Parses raw HTML into a structured BeautifulSoup object.
         Extracts the page title from the first <h1> tag and the main content
@@ -69,7 +93,15 @@ class WikiScraper:
             for j in junk:
                 for d in content.select(j): 
                     d.decompose()
-        return url, title, content
+        
+        categories = []
+        cat_container = soup.select('#mw-normal-catlinks a')
+        for c in cat_container:
+            text = c.get_text(strip=True).lower()
+            if text != "categories":  # skip header link
+                categories.append(text)
+                
+        return url, title, content, categories
 
     #time to 'crawl'
     def extract_links(self, cleaned_content: BS) -> list[str]:
@@ -137,16 +169,21 @@ class WikiScraper:
         '''
         if link not in self.visited:
             if current_depth >= 0:
-                self.visited.add(link) 
                 raw_html: str | None = self.fetch_html(link)
-                if raw_html is not None:
-                    link, title, parsed_text = self.parser(link, raw_html)
-                    if parsed_text is not None:
-                        content_dict: dict = self.text_to_dict(link, title, parsed_text)
-                        self.save_to_jsonl(content_dict)
-                        new_links: list[str] = self.extract_links(parsed_text)
-                        for new_link in new_links:
-                            self.scrape(new_link, current_depth-1)
+                if raw_html is None:
+                    return
+                link, title, parsed_text, categories = self.parser(link, raw_html)
+                if not is_valid_title(title):
+                    return
+                if is_real_world(categories):
+                    return
+                self.visited.add(link) 
+                if parsed_text is not None:
+                    content_dict: dict = self.text_to_dict(link, title, parsed_text)
+                    self.save_to_jsonl(content_dict)
+                    new_links: list[str] = self.extract_links(parsed_text)
+                    for new_link in new_links:
+                        self.scrape(new_link, current_depth-1)
     
     #to start scraping we need to run the scrape method on the base url
     def start_scraping(self) -> None:
