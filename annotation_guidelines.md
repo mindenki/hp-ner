@@ -127,7 +127,7 @@ Any **named individual** — human, wizard, ghost, or non-human being — who is
 | `Griphook` | CHAR | Named individual goblin with agency |
 | `Firenze` | CHAR | Named centaur with individual role |
 | `Minister of Magic` | ❌ | Too generic |
-| `anti-Voldemort` | CHAR | Character name appearing in collocations |
+| `anti-Voldemort` | CHAR (only Voldemort)   | Character name appearing in collocations |
 
 ---
 
@@ -142,7 +142,7 @@ Any **named place** — real or fictional — including buildings, rooms, region
 - Countries and cities: `England`, `London`, `Edinburgh`, `Godric's Hollow`
 - Real-world locations: `Paris`, `New York`, `Amazon`
 - Magical regions and hidden places: `Knockturn Alley`, `Ministry Atrium`
-- Event names that contain a place: `the Battle of Hogwarts`
+- Named places appearing in event names: `the Battle of Hogwarts`
 
 ❌ **Exclude:**
 - Generic location words: `the forest`, `a room`, `the school`, `a nearby town`
@@ -169,8 +169,9 @@ This is the most common ambiguity. Use context to decide:
 | `Ministry of Magic` (institution) | ORG | |
 | `Ministry corridors` | LOC | Physical space |
 | `Gryffindor Tower` | LOC | Named physical location |
-| `the Battle of Hogwarts` | LOC | Event containing location name |
+| `the Battle of Hogwarts` | LOC | Named place appearing in event names |
 | `Department of Mysteries` | ORG | Named department = institution |
+| `Azkaban` | ORG | Prison as institution |
 
 ---
 
