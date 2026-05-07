@@ -103,6 +103,7 @@ Any **named individual** — human, wizard, ghost, or non-human being — who is
 - Historical and mythological figures: `Merlin`, `Morgan le Fay`
 - Real-world people: `Napoleon`, `Shakespeare`, `Queen Victoria`
 - Named non-human individuals who are treated as people with personality and narrative agency (see CREA boundary below): `Dobby`, `Griphook`, `Firenze`
+- Character names appearing in collocations: `anti-Voldermort` , `Voldemort-controlled` (mark only the character name)
 
 ❌ **Exclude:**
 - Generic role descriptions: `the witch`, `a wizard`, `the professor`, `an Auror`
@@ -125,6 +126,8 @@ Any **named individual** — human, wizard, ghost, or non-human being — who is
 | `Dobby` | CHAR | Named individual with personality and narrative agency |
 | `Griphook` | CHAR | Named individual goblin with agency |
 | `Firenze` | CHAR | Named centaur with individual role |
+| `Minister of Magic` | ❌ | Too generic |
+| `anti-Voldemort` | CHAR | Character name appearing in collocations |
 
 ---
 
@@ -139,10 +142,10 @@ Any **named place** — real or fictional — including buildings, rooms, region
 - Countries and cities: `England`, `London`, `Edinburgh`, `Godric's Hollow`
 - Real-world locations: `Paris`, `New York`, `Amazon`
 - Magical regions and hidden places: `Knockturn Alley`, `Ministry Atrium`
+- Event names that contain a place: `the Battle of Hogwarts`
 
 ❌ **Exclude:**
 - Generic location words: `the forest`, `a room`, `the school`, `a nearby town`
-- Event names that contain a place: `the Battle of Hogwarts` is an event — annotate `Hogwarts` as LOC only if it appears separately
 - Directional references: `upstairs`, `the left corridor`
 
 **LOC vs ORG — the Hogwarts rule:**
@@ -166,7 +169,7 @@ This is the most common ambiguity. Use context to decide:
 | `Ministry of Magic` (institution) | ORG | |
 | `Ministry corridors` | LOC | Physical space |
 | `Gryffindor Tower` | LOC | Named physical location |
-| `the Battle of Hogwarts` | ❌ (event) | Not a place — `Hogwarts` standalone = LOC |
+| `the Battle of Hogwarts` | LOC | Event containing location name |
 | `Department of Mysteries` | ORG | Named department = institution |
 
 ---
@@ -183,6 +186,8 @@ Any **named group, institution, team, or structured body** — real or fictional
 - Named clubs and societies: `Slug Club`, `S.P.E.W.`, `Inquisitorial Squad`
 - Publications as organizations: `Daily Prophet` (when referring to the outlet)
 - Real-world organizations: `BBC`, `United Nations`, `Twitter`
+- Events with an organizing comittee: `Triwizard Tournament`
+- Prisons as institutions: `Azkaban`
 - Businesses: `Gringotts`, `Ollivanders`
 
 ❌ **Exclude:**
@@ -263,11 +268,13 @@ A generic cat or owl is just an animal — it is not a *named entity* in the NER
 - Named species (when functioning as a class noun with an established name): `Dementor`, `hippogriff`, `basilisk`, `house-elf`, `Thestral`, `werewolf`, `centaur`
 - Non-human sentient beings referred to by species: `a goblin`, `a vampire`, `a giant`, `a mermaid`, `a Veela`
 - Named pets: `Crookshanks`, `Hedwig`, `Trevor`, `Scabbers`
+- Magical plants with human features: `Mandragora`
 
 ❌ **Exclude:**
 - Generic real-world animals: `a cat`, `an owl`, `a rat` (unless named)
 - Named individuals with person-level agency → use CHAR: `Dobby`, `Griphook`, `Firenze`
 - Generic: `the creature`, `a beast`, `the animal`
+- Generic magical plants: `Fluxweed`
 
 **CHAR vs CREA boundary rule:**  
 Use **CHAR** if the entity:
@@ -309,18 +316,20 @@ Potions are not incantations or magical effects (which are SPELL) — they are p
 
 ✅ **Include:**
 - Named magical objects: `Elder Wand`, `Sorting Hat`, `Marauder's Map`
-- Named Horcruxes: `Tom Riddle's Diary`, `Hufflepuff's Cup`, `Slytherin's Locket`
+- Horcruxes: `Horcrux`, `Tom Riddle's Diary`, `Hufflepuff's Cup`, `Slytherin's Locket`
 - Named potions: `Polyjuice Potion`, `Felix Felicis`, `Veritaserum`, `Amortentia`, `Wolfsbane Potion`
 - Named books as objects: `Hogwarts: A History`, `The Monster Book of Monsters`
 - Named vehicles: `Hogwarts Express`, `Knight Bus`, `Flying Ford Anglia`
 - Named weapons: `Sword of Gryffindor`
 - Deathly Hallows: `Invisibility Cloak`, `Resurrection Stone`, `Elder Wand`
-- Named magical devices: `Time-Turner`, `Sneakoscope`, `Deluminator`
+- Named magical devices: `Time-Turner`, `Sneakoscope`, `Deluminator`, `Portkey`
+- Physical appearance of named symbols: `Dark Mark` (only if it appears on a forearm)
 
 ❌ **Exclude:**
 - Generic objects: `a wand`, `a broomstick`, `a cauldron`, `a potion`
 - Unnamed items: `his cloak`, `her bag`, `the old book`
 - Spell names (even if the spell produces an artifact): `Accio` is SPELL, not ARTI
+- Potion ingredients (excpet if it is a named magical object):  `Nutmeg`
 
 **Tricky cases:**
 
@@ -336,6 +345,8 @@ Potions are not incantations or magical effects (which are SPELL) — they are p
 | `the Daily Prophet` (institution) | ORG | |
 | `the Invisibility Cloak` | ARTI | Named Deathly Hallow |
 | `an invisibility cloak` | ❌ | Generic object |
+| `Dark Mark ` (on a forearm) | ARTI | Generic object |
+| `Dark Mark ` (in the sky) | ❌ | not a physical substance |
 
 ---
 
@@ -585,7 +596,7 @@ Every adjudicated decision that reveals a gap in the guidelines should be added 
 | `Death Eaters` vs `the Death Eaters` | ORG | Annotate `Death Eaters` — exclude `the` |
 | `Dumbledore's Army` | ORG | Possessive is part of the name |
 | `Harry's wand` | `Harry` = CHAR | Possessive — annotate name only |
-| `the Battle of Hogwarts` | ❌ event | `Hogwarts` standalone = LOC |
+| `the Battle of Hogwarts` | LOC | Event containing location name |
 | `S.P.E.W.` | ORG | Named society |
 | `the Daily Prophet` (outlet) | ORG | |
 | `a copy of the Daily Prophet` | ARTI | Physical object |
