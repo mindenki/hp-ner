@@ -59,7 +59,9 @@ class WikiScraper:
         Returns the HTML as a string if the request succeeds,
         or None if it fails, logging the error details.
         '''
-        time.sleep(self.delay_time) #taking a break
+        if random.random() < 0.05:
+            time.sleep(random.uniform(10, 25))
+        time.sleep(random.uniform(1, 3)) #taking a break
         response = self.session.get(url) #getting url
         if response.status_code == 200: #checking status code, only proceed if response was successful
             logger.info(f"Visiting: {url}")
@@ -114,8 +116,8 @@ class WikiScraper:
                     link: str = urljoin(self.home_url, a['href'])
                     if link not in self.visited:
                         links_to_visit.append(link) #we only extract pages that we have not visited before
-
-        return links_to_visit
+        random.shuffle(links_to_visit) #we shuffle the links to avoid always going down the same path in the wiki
+        return links_to_visit[:50]
     
     def text_to_dict(self, url:str, title:str, parsed_text: BS) -> dict:
         '''

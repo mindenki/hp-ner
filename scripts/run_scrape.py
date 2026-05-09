@@ -7,9 +7,9 @@ logger.setLevel(logging.INFO)
 
 console_handler = logging.StreamHandler()
 logger.addHandler(console_handler)
-
 base_urls: list[str] = [
     # Persons
+    
     "https://harrypotter.fandom.com/wiki/Harry_Potter",
     "https://harrypotter.fandom.com/wiki/Hermione_Granger",
     "https://harrypotter.fandom.com/wiki/Ron_Weasley",
@@ -82,7 +82,10 @@ base_urls: list[str] = [
 
 home_url = 'https://harrypotter.fandom.com'
 depth=2
-headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36'}
+headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Connection": "keep-alive"}
 delay_time=2
 
 folder = './data/raw/'
