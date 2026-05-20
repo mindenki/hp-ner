@@ -208,6 +208,24 @@ def main():
 
     # select gold buckets
     gold = select_buckets(records, BUCKET_TARGETS, OVERLAP_COUNT, args.seed)
+    # Collect ALL gold ids
+    gold_ids = set()
+
+    for bucket_name, bucket_records in gold.items():
+        if bucket_name == "overlap":
+            continue
+
+        gold_ids.update(r["id"] for r in bucket_records)
+
+    # Remaining silver pool = everything not selected for gold
+    remaining_silver = [
+        r for r in records
+        if r["id"] not in gold_ids
+    ]
+
+    logger.info(
+        f"Remaining silver pool size: {len(remaining_silver)}"
+    )
     buckets = {k: v for k, v in gold.items() if k != "overlap"}
     overlap = gold["overlap"]
 
@@ -233,6 +251,11 @@ def main():
     write_jsonl(overlap, output_dir / "overlap.jsonl")
     for annotator, recs in annotator_splits.items():
         write_jsonl(recs, output_dir / f"{annotator}_unique.jsonl")
+    
+    write_jsonl(
+        remaining_silver,
+        output_dir / "remaining_silver.jsonl"
+    )
 
     log_stats(gold)
     logger.info(
