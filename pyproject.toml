@@ -17,11 +17,16 @@ dependencies = [
     "pyyaml>=6.0",
     # Data / utils
     "numpy>=1.26",
+    # Plotting (evaluator + aggregate plots)
+    "matplotlib>=3.8",
 ]
 
 [project.scripts]
 train = "baseline.scripts.train:main"
 evaluate = "baseline.scripts.evaluate:main"
+split-gold = "baseline.scripts.split_gold:main"
+run-pipelines = "baseline.scripts.run_pipelines:main"
+aggregate-plots = "baseline.scripts.aggregate_plots:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -28,6 +28,33 @@ class TrainConfig:
     seed: Optional[int | None] = None
 
 
+LEARNING_CURVE_FRACTIONS: tuple[float, ...] = (0.1, 0.2, 0.4, 0.6, 0.8, 1.0)
+
+
+@dataclass
+class _CurveTracker:
+    """Fires once per learning-curve fraction as global_step crosses each threshold."""
+    targets: list[tuple[float, int]]   # [(fraction, target_step), ...] sorted by step
+    _idx: int = 0
+
+    @classmethod
+    def from_total_steps(cls, total_steps: int) -> "_CurveTracker":
+        # Dedupe collisions on tiny datasets — first-write keeps the smaller fraction.
+        seen: dict[int, float] = {}
+        for fraction in LEARNING_CURVE_FRACTIONS:
+            step = max(1, round(fraction * total_steps))
+            seen.setdefault(step, fraction)
+        targets = sorted(((f, s) for s, f in seen.items()), key=lambda kv: kv[1])
+        return cls(targets=targets)
+
+    def pop_if_due(self, global_step: int) -> Optional[float]:
+        if self._idx < len(self.targets) and global_step >= self.targets[self._idx][1]:
+            fraction, _ = self.targets[self._idx]
+            self._idx += 1
+            return fraction
+        return None
+
+
 class Trainer:
     """Manual PyTorch training loop for DeBERTaNER."""
 
@@ -38,6 +65,7 @@ class Trainer:
         self._config = config
         self._output_dir = output_dir
         self._history: list[dict] = []
+        self._learning_curve: list[dict] = []
 
     def train(self, train_dataset: NERDataset, dev_dataset: NERDataset) -> None:
         """Run the full training loop and save the best checkpoint."""
@@ -77,11 +105,22 @@ class Trainer:
             f"lr={self._config.learning_rate:.2e}  total_steps={total_steps}  warmup_steps={warmup_steps}",
         )
 
+        curve = _CurveTracker.from_total_steps(total_steps)
+        logger.info(
+            "Learning-curve checkpoints scheduled at "
+            f"{[(f, s) for f, s in curve.targets]} (fraction, global_step)",
+        )
+
         id2label = self._model.config.id2label
         best_f1 = 0.0
+        global_step = 0
+        running_loss = 0.0
 
         for epoch in range(1, self._config.num_epochs + 1):
-            train_loss = self._train_epoch(train_loader, optimizer, scheduler, device)
+            train_loss, global_step, running_loss = self._train_epoch(
+                train_loader, dev_loader, optimizer, scheduler, device,
+                curve, id2label, global_step, running_loss,
+            )
             dev_f1 = self._evaluate(dev_loader, id2label, device)
 
             logger.info(
@@ -98,12 +137,25 @@ class Trainer:
         self._output_dir.mkdir(parents=True, exist_ok=True)
         history_path = self._output_dir / "training_history.json"
         history_path.write_text(json.dumps(self._history, indent=2), encoding="utf-8")
+        # learning_curve.json is persisted incrementally by _record_curve_point — no final write needed.
         logger.info(
-            f"Training complete — best dev F1: {best_f1:.4f}  checkpoint: {self._output_dir / 'best_model'}  history: {history_path}",
+            f"Training complete — best dev F1: {best_f1:.4f}  checkpoint: {self._output_dir / 'best_model'}  "
+            f"history: {history_path}  curve: {self._output_dir / 'learning_curve.json'}",
         )
 
-    def _train_epoch(self, dataloader: DataLoader, optimizer: torch.optim.Optimizer, scheduler, device: torch.device) -> float:
-        """Train for one epoch and return average loss.
+    def _train_epoch(
+        self,
+        dataloader: DataLoader,
+        dev_loader: DataLoader,
+        optimizer: torch.optim.Optimizer,
+        scheduler,
+        device: torch.device,
+        curve: _CurveTracker,
+        id2label: dict[int, str],
+        global_step: int,
+        running_loss: float,
+    ) -> tuple[float, int, float]:
+        """Train for one epoch and return (avg epoch loss, updated global_step, updated running_loss).
 
         Per-batch parameter update cycle:
           1. loss.backward()        — computes ∂loss/∂w for every parameter via
@@ -136,12 +188,49 @@ class Trainer:
             logger.debug(f"Batch {batch_idx + 1}/{len(dataloader)} — optimizer step completed  grad_norm={grad_norm:.4f}")
             scheduler.step() # update learning rate
             optimizer.zero_grad()
-            total_loss += loss.item()
+
+            batch_loss = loss.item()
+            total_loss += batch_loss
+            running_loss += batch_loss
+            global_step += 1
+
+            fraction = curve.pop_if_due(global_step)
+            if fraction is not None:
+                self._record_curve_point(fraction, global_step, running_loss, dev_loader, id2label, device)
+                self._model.train()  # _record_curve_point flips to eval(); restore training mode
 
             if (batch_idx + 1) % 50 == 0:
-                logger.debug(f"  batch {batch_idx + 1}/{len(dataloader)} — loss={loss.item():.4f}  lr={scheduler.get_last_lr()[0]:.2e}")
+                logger.debug(f"  batch {batch_idx + 1}/{len(dataloader)} — loss={batch_loss:.4f}  lr={scheduler.get_last_lr()[0]:.2e}")
 
-        return total_loss / len(dataloader) # average loss per batch
+        return total_loss / len(dataloader), global_step, running_loss
+
+    def _record_curve_point(
+        self,
+        fraction: float,
+        global_step: int,
+        running_loss: float,
+        dev_loader: DataLoader,
+        id2label: dict[int, str],
+        device: torch.device,
+    ) -> None:
+        """Append a learning-curve checkpoint and persist after every write."""
+        train_loss_avg = running_loss / global_step
+        dev_f1 = self._evaluate(dev_loader, id2label, device)
+        point = {
+            "fraction": fraction,
+            "global_step": global_step,
+            "train_loss_avg": train_loss_avg,
+            "dev_f1": dev_f1,
+        }
+        self._learning_curve.append(point)
+        logger.info(
+            f"Learning-curve checkpoint — fraction={fraction:.2f}  step={global_step}  "
+            f"train_loss_avg={train_loss_avg:.4f}  dev_f1={dev_f1:.4f}",
+        )
+        self._output_dir.mkdir(parents=True, exist_ok=True)
+        (self._output_dir / "learning_curve.json").write_text(
+            json.dumps(self._learning_curve, indent=2), encoding="utf-8",
+        )
 
     def _evaluate(self, dataloader: DataLoader, id2label: dict[int, str], device: torch.device) -> float:
         """Evaluate on the dev set and return micro-averaged F1 score."""
