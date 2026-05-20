@@ -21,12 +21,10 @@ import yaml # to read config from yaml to python dict
 
 _BASELINE_DIR = Path(__file__).resolve().parent.parent
 _PROJECT_ROOT = _BASELINE_DIR.parent
-# Add baseline/ to sys.path so 'src' package is importable.
-sys.path.insert(0, str(_BASELINE_DIR))
 
-from src.dataset import NERDataset, build_label_vocab, read_iob2  # noqa: E402
-from src.model import DeBERTaNER  # noqa: E402
-from src.trainer import TrainConfig, Trainer  # noqa: E402
+from baseline.src.dataset import NERDataset, build_label_vocab, read_iob2
+from baseline.src.model import DeBERTaNER
+from baseline.src.trainer import TrainConfig, Trainer
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +37,7 @@ def _setup_logging() -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
-    logging.getLogger("src").setLevel(logging.DEBUG)
+    logging.getLogger("baseline.src").setLevel(logging.DEBUG)
     # 🥹
 
 def main() -> None:

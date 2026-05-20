@@ -29,7 +29,15 @@ class Sentence:
 
 
 def read_iob2(path: Path) -> list[Sentence]:
-    """Read an EWT IOB2 file and return a list of Sentence objects."""
+    """Read an IOB2 file and return a list of Sentence objects.
+
+    Supported variants (whitespace-separated):
+    - 2 columns: TOKEN LABEL
+    - 3 columns: IDX TOKEN LABEL
+    - 5 columns (EWT): IDX TOKEN LABEL _ _
+
+    Comment lines starting with ``#`` are skipped; blank lines separate sentences.
+    """
     logger.info(f"Reading IOB2 file: {path}")
     sentences: list[Sentence] = []
     current_words: list[str] = []
@@ -37,18 +45,37 @@ def read_iob2(path: Path) -> list[Sentence]:
 
     with path.open(encoding="utf-8") as fh:
         for line in fh:
-            line = line.rstrip("\n")
-            if line.startswith("#"):
+            raw = line.rstrip("\n")
+            if raw.lstrip().startswith("#"):
                 continue
-            if line == "": # Sentence boundary
+            if raw.strip() == "":  # Sentence boundary
                 if current_words:
                     sentences.append(Sentence(words=current_words, labels=current_labels))
                     current_words = []
                     current_labels = []
             else:
-                parts = line.split("\t")
-                current_words.append(parts[1])
-                current_labels.append(parts[2])
+                parts = raw.split()
+                word: str | None = None
+                label: str | None = None
+                if len(parts) >= 5:
+                    # EWT-style: idx, token, label, _, _
+                    word, label = parts[1], parts[2]
+                elif len(parts) == 3:
+                    # idx, token, label
+                    word, label = parts[1], parts[2]
+                elif len(parts) == 2:
+                    # token, label
+                    word, label = parts[0], parts[1]
+                else:
+                    logger.warning(
+                        "Skipping malformed IOB2 line in %s: %r",
+                        path.name,
+                        raw,
+                    )
+                    continue
+
+                current_words.append(word)
+                current_labels.append(label)
 
     if current_words:
         sentences.append(Sentence(words=current_words, labels=current_labels))

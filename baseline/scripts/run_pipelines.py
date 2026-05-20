@@ -26,10 +26,10 @@ from typing import Any
 
 import yaml
 
-from src.dataset import NERDataset, build_label_vocab, read_iob2
-from src.evaluator import Evaluator
-from src.model import DeBERTaNER
-from src.trainer import TrainConfig, Trainer
+from baseline.src.dataset import NERDataset, build_label_vocab, read_iob2
+from baseline.src.evaluator import Evaluator
+from baseline.src.model import DeBERTaNER
+from baseline.src.trainer import TrainConfig, Trainer
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -43,7 +43,7 @@ def _setup_logging() -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
-    logging.getLogger("src").setLevel(logging.INFO)
+    logging.getLogger("baseline.src").setLevel(logging.INFO)
 
 
 def _resolve(path: str) -> Path:
@@ -60,6 +60,53 @@ def _build_hp_label_vocab(gold_train_path: Path) -> tuple[dict[str, int], dict[i
     """
     train_sentences = read_iob2(gold_train_path)
     return build_label_vocab(train_sentences)
+
+
+def _resolve_ewt_checkpoint(paths: dict[str, str]) -> Path:
+    """Resolve the EWT checkpoint directory.
+
+    Primary: ``paths['ewt_checkpoint']`` (relative to project root unless absolute).
+
+    Fallback: if that path doesn't exist and looks like the conventional
+    ``outputs/baseline/best_model``, try:
+      - outputs/baseline/LATEST_RUN.txt -> <run_name>/best_model
+      - newest outputs/baseline/run_*/best_model
+    """
+    configured = _resolve(paths["ewt_checkpoint"])
+    if configured.exists():
+        return configured
+
+    # If the baseline outputs folder exists, try to resolve the latest run.
+    baseline_outputs = configured.parent if configured.name == "best_model" else configured
+    if baseline_outputs.exists() and baseline_outputs.is_dir():
+        latest_ptr = baseline_outputs / "LATEST_RUN.txt"
+        if latest_ptr.exists():
+            run_name = latest_ptr.read_text(encoding="utf-8").strip()
+            candidate = baseline_outputs / run_name / "best_model"
+            if candidate.exists():
+                logger.info(
+                    "Resolved EWT checkpoint via LATEST_RUN.txt: %s",
+                    candidate,
+                )
+                return candidate
+
+        run_dirs = sorted(
+            (p for p in baseline_outputs.glob("run_*") if p.is_dir()),
+            key=lambda p: p.name,
+            reverse=True,
+        )
+        for run_dir in run_dirs:
+            candidate = run_dir / "best_model"
+            if candidate.exists():
+                logger.info(
+                    "Resolved EWT checkpoint via newest run dir: %s",
+                    candidate,
+                )
+                return candidate
+
+    raise FileNotFoundError(
+        f"EWT checkpoint not found at {configured} (and no fallback baseline run found)."
+    )
 
 
 def _load_starting_model(
@@ -85,11 +132,7 @@ def _load_starting_model(
             label2id=label2id,
         )
     if init_from == "ewt_checkpoint":
-        ckpt_path = _resolve(paths["ewt_checkpoint"])
-        if not ckpt_path.exists():
-            raise FileNotFoundError(
-                f"EWT checkpoint not found at {ckpt_path} — set paths.ewt_checkpoint in pipelines.yaml",
-            )
+        ckpt_path = _resolve_ewt_checkpoint(paths)
         logger.info(f"Initializing from EWT checkpoint: {ckpt_path}")
         return DeBERTaNER(
             model_name=str(ckpt_path),

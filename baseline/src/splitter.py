@@ -5,7 +5,7 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.dataset import Sentence, read_iob2
+from baseline.src.dataset import Sentence, read_iob2
 
 logger = logging.getLogger(__name__)
 

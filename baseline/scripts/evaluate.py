@@ -16,14 +16,12 @@ from pathlib import Path
 
 import yaml
 
-# Add baseline/ to sys.path so `src` package is importable
 _BASELINE_DIR = Path(__file__).resolve().parent.parent
 _PROJECT_ROOT = _BASELINE_DIR.parent
-sys.path.insert(0, str(_BASELINE_DIR))
 
-from src.dataset import NERDataset, read_iob2  # noqa: E402
-from src.evaluator import Evaluator  # noqa: E402
-from src.model import DeBERTaNER  # noqa: E402
+from baseline.src.dataset import NERDataset, read_iob2
+from baseline.src.evaluator import Evaluator
+from baseline.src.model import DeBERTaNER
 
 logger = logging.getLogger(__name__)
 

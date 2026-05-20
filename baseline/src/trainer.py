@@ -11,8 +11,8 @@ from seqeval.metrics import f1_score
 from torch.utils.data import DataLoader
 from transformers import get_linear_schedule_with_warmup
 
-from src.dataset import NERDataset, collate_fn
-from src.model import DeBERTaNER
+from baseline.src.dataset import NERDataset, collate_fn
+from baseline.src.model import DeBERTaNER
 
 logger = logging.getLogger(__name__)
 

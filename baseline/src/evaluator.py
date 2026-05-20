@@ -18,11 +18,26 @@ from seqeval.metrics import (
 from seqeval.scheme import IOB2
 from torch.utils.data import DataLoader
 
-from src.dataset import NERDataset, collate_fn
-from src.model import DeBERTaNER
-from src.plots import plot_confusion, plot_per_class
+from baseline.src.dataset import NERDataset, collate_fn
+from baseline.src.model import DeBERTaNER
+from baseline.src.plots import plot_confusion, plot_per_class
 
 logger = logging.getLogger(__name__)
+
+
+def _json_default(obj: Any) -> Any:
+    """JSON serializer for objects that aren't natively serializable.
+
+    This primarily handles NumPy scalar types (e.g. ``np.int64``) that can appear
+    in `seqeval`'s `classification_report(..., output_dict=True)` output.
+    """
+    if isinstance(obj, np.generic):
+        return obj.item()
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, Path):
+        return str(obj)
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 
 class Evaluator:
@@ -153,7 +168,7 @@ class Evaluator:
         output_dir.mkdir(parents=True, exist_ok=True)
         metrics_path = output_dir / "metrics.jsonl"
         with metrics_path.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(record) + "\n")
+            fh.write(json.dumps(record, default=_json_default) + "\n")
         logger.info(
             f"Appended metrics row to {metrics_path}  "
             f"P={overall['precision']:.4f}  R={overall['recall']:.4f}  "

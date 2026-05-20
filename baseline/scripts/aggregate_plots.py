@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from src.plots import plot_learning_curves_aggregate
+from baseline.src.plots import plot_learning_curves_aggregate
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
