@@ -4,30 +4,10 @@ services:
     container_name: doccano
     env_file: .env
     ports:
-      # Bound to 127.0.0.1 only - not reachable from the internet directly.
-      # Annotators go through Caddy (HTTPS).
-      # Admin scripts go through SSH tunnel: ssh -L 8000:localhost:8000 azureuser@<ip>
       - "127.0.0.1:8000:8000"
     volumes:
       - doccano-db:/data
     restart: unless-stopped
 
-  caddy:
-    image: caddy:alpine
-    container_name: caddy
-    env_file: .env
-    ports:
-      - "80:80" # HTTP -> redirect to HTTPS
-      - "443:443" # HTTPS for annotators
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data # Let's Encrypt certs (persisted)
-      - caddy-config:/config # Caddy runtime config
-    restart: unless-stopped
-    depends_on:
-      - doccano
-
 volumes:
   doccano-db:
-  caddy-data:
-  caddy-config:
