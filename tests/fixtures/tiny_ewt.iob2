@@ -1,0 +1,9 @@
+# sent_id = test-1
+1	Where	O	-	-
+2	is	O	-	-
+3	Iguazu	B-LOC	-	-
+4	?	O	-	-
+
+# sent_id = test-2
+1	Hello	O	-	-
+2	.	O	-	-

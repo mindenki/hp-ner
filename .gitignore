@@ -19,3 +19,24 @@ outputs/
 
 # OS
 .DS_Store
+
+# pipeline scratch / derived artefacts
+data/raw/
+data/cleaned/
+data/filtered/
+data/dictionaries/
+data/silver/
+data/annotated/
+data/iaa/
+data/merged/
+data/*.log
+data/selected/gold_pool/
+data/selected/gold/train.iob2
+data/selected/gold/dev.iob2
+data/selected/gold/test.iob2
+
+# script outputs
+outputs/pipelines/
+outputs/aggregate/
+outputs/gpt4o/
+outputs/logs/

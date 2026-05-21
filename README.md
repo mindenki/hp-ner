@@ -1,200 +1,251 @@
-# Baseline: DeBERTaV3 NER on EWT
+# HP-NER — Named Entity Recognition in the Harry Potter Universe
 
-Fine-tunes `microsoft/deberta-v3-base` on the English Web Treebank (EWT) for Named Entity Recognition.
-This serves as the course baseline submission and as the zero-shot comparison model for the Harry Potter NER experiments.
+End-to-end NER pipeline for six fictional entity types
+(`CHARACTER`, `LOCATION`, `ORGANIZATION`, `CREATURE`, `SPELL`,
+`ARTIFACT`) on text scraped from the Harry Potter Fandom wiki.
+Compares a DeBERTaV3 baseline against fine-tuned and silver-to-gold
+variants and includes an optional GPT-4o zero-shot reference.
 
-Entities recognized: **PER** (person), **LOC** (location), **ORG** (organization) in IOB2 format.
-
----
-
-## Repository Structure
-
-```
-hp-ner/
-├── pyproject.toml               # Project metadata and dependencies (uv)
-├── uv.lock                      # Pinned dependency versions
-├── baseline/
-│   ├── configs/
-│   │   └── baseline.yaml        # All hyperparameters and paths
-│   ├── scripts/
-│   │   ├── train.py             # Training entrypoint
-│   │   └── evaluate.py          # Evaluation + span_f1.py runner
-│   └── src/
-│       ├── dataset.py           # IOB2 reader + PyTorch Dataset
-│       ├── model.py             # DeBERTaV3 token classification model
-│       ├── trainer.py           # Training loop
-│       └── evaluator.py         # Inference + prediction writer
-├── data/                        # Place EWT .iob2 files here
-│   ├── en_ewt-ud-train.iob2
-│   ├── en_ewt-ud-dev.iob2
-│   └── en_ewt-ud-test-masked.iob2
-├── outputs/                     # Model checkpoints and predictions (git-ignored)
-│   └── baseline/
-│       ├── LATEST_RUN.txt       # Points to latest run folder
-│       └── run_YYYYmmdd_HHMMSS/
-│           ├── best_model/      # Saved after training
-│           ├── predictions/     # Written by evaluate.py
-│           ├── label2id.json    # Label vocabulary (built from training set)
-│           └── training_history.json
-└── span_f1.py                   # Place course-provided script here (project root)
-```
+> **Paper:** see `NER_Project_Report.pdf`
 
 ---
 
 ## Prerequisites
 
-- **Python >= 3.11**
-- **[uv](https://docs.astral.sh/uv/)** - fast Python package manager
+- **Python ≥ 3.11**
+- **[uv](https://docs.astral.sh/uv/)** — manages the venv and installs the project editable
+- **Docker Desktop** — only needed for the Doccano steps (annotation prep & export)
+- **(optional) `OPENAI_API_KEY`** env var — only for `train-and-evaluate --with-llm-reference`
 
-Install `uv` if you don't have it:
+The pipeline runs on **macOS, Linux, and Windows**. Where commands differ, both versions
+are shown side-by-side. PowerShell is the recommended shell on Windows.
 
-**macOS / Linux**
+---
+
+## Installation
+
+### 1. Install `uv`
+
+**macOS / Linux** (bash/zsh):
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-**Windows (PowerShell)**
+**Windows** (PowerShell):
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
----
+After install, open a new terminal so `uv` is on your `PATH`.
 
-## Setup
-
-### 1. Sync dependencies
-
-From the project root, install all dependencies into a managed virtual environment:
+### 2. Clone and sync
 
 ```bash
+git clone https://github.com/mindenki/hp-ner.git
+cd hp-ner
 uv sync
 ```
 
-This creates a `.venv/` directory and installs all packages pinned in `uv.lock`.
+`uv sync` creates a `.venv/`, installs all dependencies pinned in `uv.lock`, and
+installs this project itself in editable mode (so `prepare-annotation`,
+`finalize-gold`, `train-and-evaluate` become console commands).
 
-> **GPU default:** This project is configured so `torch` is resolved from the official PyTorch CUDA 12.8 index when syncing with `uv`, enabling CUDA on supported NVIDIA systems.
->
-> **CPU-only fallback (optional):** If you intentionally want CPU-only PyTorch, reinstall torch in the environment with:
->
-> `uv pip install --python .venv/bin/python --index-url https://download.pytorch.org/whl/cpu --force-reinstall torch`
+### 3. (Optional) GPT-4o key
 
-### 2. Activate the virtual environment
+If you plan to use the `--with-llm-reference` flag:
 
-```bash
-source .venv/bin/activate
-```
-
-To deactivate later:
+**macOS / Linux:**
 
 ```bash
-deactivate
+export OPENAI_API_KEY=sk-...
 ```
 
-> **Note:** You can skip activation entirely and prefix commands with `uv run` instead (see below). `uv run` automatically uses the managed environment.
+**Windows (PowerShell):**
 
-### 3. Place data files
-
-Put the EWT data files in `data/`:
-
-```
-data/en_ewt-ud-train.iob2
-data/en_ewt-ud-dev.iob2
-data/en_ewt-ud-test-masked.iob2
+```powershell
+$env:OPENAI_API_KEY = "sk-..."
 ```
 
-Place the course-provided `span_f1.py` at the **project root** (alongside `pyproject.toml`).
+**Windows (cmd.exe):**
+
+```bat
+set OPENAI_API_KEY=sk-...
+```
+
+Persist it across sessions by adding it to your shell profile (`~/.zshrc`,
+`~/.bashrc`) or PowerShell `$PROFILE`, or set it as a permanent user env var
+via System Properties → Environment Variables on Windows.
 
 ---
 
-## Training
+## Reproduce the project end-to-end
 
-With `uv run` (no activation needed):
+Three console scripts, run in order. Each script supports:
 
-```bash
-uv run train
-```
+- `--only-step STEP` (repeatable) — run only the listed step(s); default = all
+- `--force-<step>` — re-run a step whose output already exists
 
-Or with the venv activated:
-
-```bash
-python baseline/scripts/train.py
-```
-
-Pass `--config path/to.yaml` to override the default config (`baseline/configs/baseline.yaml`).
-
-**What it does:**
-- Fine-tunes DeBERTaV3-base on the EWT training set
-- Evaluates on the dev set after each epoch (seqeval micro-F1)
-- Saves each training run into its own folder: `outputs/baseline/run_YYYYmmdd_HHMMSS/`
-- Saves the best checkpoint (by dev F1) to `outputs/baseline/run_YYYYmmdd_HHMMSS/best_model/`
-- Saves the label vocabulary to `outputs/baseline/run_YYYYmmdd_HHMMSS/label2id.json`
-- Saves training history to `outputs/baseline/run_YYYYmmdd_HHMMSS/training_history.json`
-- Updates `outputs/baseline/LATEST_RUN.txt` to point to the newest run
+All scripts can be invoked as `uv run <script-name>` from the project root, on
+any platform.
 
 ---
 
-## Evaluation
-
-**Dev set** (runs span_f1.py automatically if present):
+### 1. `prepare-annotation` — build the corpus and seed Doccano
 
 ```bash
-uv run evaluate --split dev
+uv run prepare-annotation
 ```
 
-Evaluate a specific run:
+**Steps** (in declaration order):
+
+| Step               | What it does                              | Skipped if                                  |
+| ------------------ | ----------------------------------------- | ------------------------------------------- |
+| `train_ewt`        | Fine-tunes DeBERTaV3 on EWT NER           | `outputs/baseline/run_*/best_model/` exists |
+| `scrape`           | Crawls the HP Fandom wiki                 | `data/raw/wiki_data.jsonl` exists           |
+| `clean`            | Sentence-split + normalise                | `data/filtered/` exists                     |
+| `build_dict`       | Builds entity dictionary                  | `data/dictionaries/txts/` populated         |
+| `silver_label`     | BERT + dictionary tagging                 | `data/silver/hp_silver.jsonl` exists        |
+| `select_15k`       | Stratified sample of 15 000 sentences     | `data/selected/silver/hp_15k.jsonl` exists  |
+| `select_gold_pool` | Pick 1 250 sentences across 4 buckets     | `data/selected/gold_pool/` populated        |
+| `setup_doccano`    | Create 4 Doccano projects + import JSONLs | `--skip-doccano` passed                     |
+
+The `setup_doccano` step needs Doccano running locally. Start it before that
+step (or pass `--skip-doccano` to defer):
 
 ```bash
-uv run evaluate --split dev --run run_YYYYmmdd_HHMMSS
+cd doccano
+docker compose up -d
+cd ..
 ```
 
-**Test set** (labels are masked - F1 not computed):
+> Windows PowerShell users: `cd ..` works the same as on Unix. Avoid the
+> `cd doccano && docker compose up -d && cd -` shortcut from older Unix docs;
+> chain commands with `;` in PowerShell or run them on separate lines.
+
+When `setup_doccano` finishes it opens `http://localhost:8000` in your default
+browser. Log in with the credentials in [doccano/README.md](doccano/README.md).
+
+**Run just one step** (handy when iterating):
 
 ```bash
-uv run evaluate --split test
+uv run prepare-annotation --only-step silver_label
+uv run prepare-annotation --only-step clean --only-step silver_label   # repeatable
+uv run prepare-annotation --force-scrape --force-silver                # ignore the skip-if-exists guard
 ```
 
-Or with the venv activated:
+---
+
+### 2. Annotate — humans label in Doccano
+
+Each annotator logs into their pre-loaded Doccano project (4 projects were
+created by `setup_doccano`, one per annotator) and labels their assigned
+sentences using the schema in [annotation_guidelines.md](annotation_guidelines.md).
+See [doccano/README.md](doccano/README.md) for the UI walk-through and
+keyboard shortcuts.
+
+---
+
+### 3. `finalize-gold` — IAA + merge + write IOB2
 
 ```bash
-python baseline/scripts/evaluate.py --split dev
-python baseline/scripts/evaluate.py --split test
+uv run finalize-gold
 ```
 
-Pass `--config path/to.yaml` to override the default config (`baseline/configs/baseline.yaml`).
+**Steps:**
 
-Run selection order in `evaluate.py`:
-- Explicit `--run`
-- `outputs/baseline/LATEST_RUN.txt`
-- Most recent `run_*` folder
+| Step                  | What it does                                            | Notes                                                                    |
+| --------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `export_from_doccano` | Pulls JSONL exports from running Doccano                | Needs Doccano up; `--skip-export` if `data/annotated/` already populated |
+| `compute_iaa`         | Pairwise Cohen κ per token                              | Hard-fails below 0.7 unless `--allow-low-agreement`                      |
+| `merge_gold`          | Majority vote on overlap; interactive prompt on ties    | `--non-interactive` skips conflicts with a warning                       |
+| `write_iob2`          | Writes `data/selected/{gold,silver}/{gold,silver}.iob2` | Always last                                                              |
 
-Predictions are written to `outputs/baseline/run_YYYYmmdd_HHMMSS/predictions/{split}.iob2` in IOB2 format.
+Conflict resolutions are persisted to `data/iaa/overrides.jsonl` so re-runs
+are repeatable.
+
+**Common variants:**
+
+```bash
+uv run finalize-gold --skip-export                                         # if data/annotated/ is already there
+uv run finalize-gold --only-step compute_iaa                               # just the agreement report
+uv run finalize-gold --non-interactive --allow-low-agreement               # batch mode
+```
+
+---
+
+### 4. `train-and-evaluate` — split + 6 pipelines + eval
+
+```bash
+uv run train-and-evaluate
+```
+
+**Steps:**
+
+| Step              | What it does                                                   |
+| ----------------- | -------------------------------------------------------------- |
+| `split_gold`      | Stratified 80/10/10 of `gold.iob2` → `train/dev/test.iob2`     |
+| `run_pipelines`   | Trains the six pipelines defined in `configs/pipelines.yaml`   |
+| `aggregate_plots` | Cross-pipeline learning-curve PNG + summary CSV                |
+| `gpt4o_reference` | GPT-4o zero-shot predictions (requires `--with-llm-reference`) |
+
+**Common variants:**
+
+```bash
+uv run train-and-evaluate --with-llm-reference                # add the GPT-4o row
+uv run train-and-evaluate --only-pipeline gold_from_ewt       # train one pipeline only
+uv run train-and-evaluate --only-step aggregate_plots         # re-build plots without re-training
+```
+
+Outputs land under `outputs/pipelines/<name>/run_*/` (per-pipeline checkpoints,
+predictions, metrics) and `outputs/aggregate/` (`learning_curves_all.png`,
+`summary.csv`).
+
+> **GPU**: on Linux with CUDA 12.8 GPUs, `uv` will install the CUDA build of
+> PyTorch automatically via the `pytorch-cu128` index. On macOS / Windows the
+> CPU build is used. Training the six pipelines end-to-end on CPU is slow
+> (hours); a single GPU is recommended for full runs.
 
 ---
 
 ## Configuration
 
-All settings live in [baseline/configs/baseline.yaml](baseline/configs/baseline.yaml)
+All hyperparameters live in YAML files under [configs/](configs/):
 
-| Parameter | Default | Description |
-|---|---|---|
-| `model.name` | `microsoft/deberta-v3-base` | HuggingFace model ID |
-| `model.max_length` | `128` | Max subword token length (sentences are truncated) |
-| `training.num_epochs` | `1` | Number of fine-tuning epochs |
-| `training.learning_rate` | `5e-6` | AdamW learning rate |
-| `training.batch_size` | `16` | Training batch size |
-| `training.warmup_ratio` | `0.1` | Fraction of steps used for linear LR warmup |
-| `training.weight_decay` | `0.01` | L2 regularization (applied to non-bias/LayerNorm params) |
-| `training.device` | `cpu` | Set to `cuda` if a GPU is available |
-| `training.seed` | `42` | Random seed for reproducibility |
-| `evaluation.batch_size` | `32` | Inference batch size |
-| `paths.output_dir` | `outputs/baseline` | Root output directory |
+- [`baseline.yaml`](configs/baseline.yaml) — EWT baseline training (used by
+  `prepare-annotation --only-step train_ewt`)
+- [`pipelines.yaml`](configs/pipelines.yaml) — the six HP fine-tuning
+  pipelines (used by `train-and-evaluate`)
+
+Edit the YAML, re-run the script — no code changes needed.
 
 ---
 
-## Notes
+## Repository layout
 
-- **Subword masking:** Only the first subword token of each word is labeled; continuation subwords are assigned `IGNORED_LABEL_ID = -100` and excluded from loss and evaluation.
-- **Truncation:** Sentences longer than `max_length` are truncated. Truncated tokens are predicted as `O` during evaluation.
-- **Label vocabulary:** Built from the training set and saved to `outputs/baseline/run_YYYYmmdd_HHMMSS/label2id.json`. The 7 labels are: `O`, `B-PER`, `I-PER`, `B-LOC`, `I-LOC`, `B-ORG`, `I-ORG`.
+```
+hp-ner/
+├── configs/                           baseline.yaml, pipelines.yaml
+├── doccano/                           local docker-compose stack + setup guide
+├── llm_reference/                     GPT-4o zero-shot reference (predict.py + prompt.py)
+├── legacy/                            Azure-VM artefacts (not used by the pipeline)
+├── scripts/                           the 3 orchestrator entry points
+│   ├── prepare_annotation.py
+│   ├── finalize_gold.py
+│   └── train_and_evaluate.py
+├── src/                               library code (namespace package, no __init__.py)
+│   ├── common/                        IOB2 reader/writer, span helpers, logging
+│   ├── modeling/                      DeBERTa NER: dataset, model, trainer, evaluator, splitter, plots
+│   ├── scraping/   preprocessing/     wiki crawler + cleaner + sentence filter
+│   ├── dict_builder/                  entity-dictionary builder
+│   ├── silver_labeling/               BERT + dictionary silver tagger
+│   ├── selection/                     stratified sampling + 4-bucket gold pool
+│   ├── annotation/                    Doccano client + merge logic
+│   ├── iaa/                           Cohen κ agreement
+│   └── baseline/                      EWT NER baseline trainer
+├── tests/                             pytest smoke tests + fixtures
+└── pyproject.toml
+```
+
+---

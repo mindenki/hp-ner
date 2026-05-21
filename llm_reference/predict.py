@@ -1,13 +1,8 @@
 """Run GPT-4o NER on a gold IOB2 file and write predictions back as IOB2.
 
-Usage:
-    OPENAI_API_KEY=... uv run gpt4o-predict \
-        --input data/selected/gold/gold.iob2 \
-        --output outputs/llm/predictions.iob2
+Exposes a single high-level entry point, ``gpt4o_reference_entrypoint(input_path, output_path)``,
+which is invoked from ``scripts/train_and_evaluate.py``'s ``gpt4o_reference`` step.
 """
-from __future__ import annotations
-
-import argparse
 import asyncio
 import json
 import logging
@@ -18,6 +13,7 @@ import openai
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from llm_reference.prompt import ENTITY_SCHEMA, SYSTEM_PROMPT
+from src.common.iob2 import Sentence, read_iob2, write_iob2
 
 logger = logging.getLogger(__name__)
 
@@ -33,31 +29,13 @@ def _is_retryable(exc: BaseException) -> bool:
     return False
 
 
-def read_tokens(path: Path) -> list[list[str]]:
-    """Pull the token column out of an IOB2 file.
+def _token_index_spans_to_iob2(n_tokens: int, spans: list[dict]) -> list[str]:
+    """Project GPT-4o's token-index spans into IOB2 tags.
 
-    Handles both the raw 2-col `token\\tlabel` gold file and the 5-col EWT-style
-    `idx\\ttoken\\tlabel\\t-\\t-` splits emitted by `split-gold`.
+    GPT-4o returns ``{"start": int, "end": int, "label": str}`` where the offsets
+    are **token indices** (not char offsets). Distinct from
+    ``src/common/spans.py``'s span helpers, which work in character space.
     """
-    sentences: list[list[str]] = []
-    current: list[str] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("#"):
-            continue
-        if line == "":
-            if current:
-                sentences.append(current)
-                current = []
-            continue
-        parts = line.split("\t")
-        current.append(parts[1] if len(parts) >= 3 else parts[0])
-    if current:
-        sentences.append(current)
-    return sentences
-
-
-def spans_to_iob2(n_tokens: int, spans: list[dict]) -> list[str]:
-    """Project schema-valid spans onto a list of BIO tags."""
     tags = ["O"] * n_tokens
     for span in sorted(spans, key=lambda s: s["start"]):
         label = span["label"]
@@ -66,16 +44,6 @@ def spans_to_iob2(n_tokens: int, spans: list[dict]) -> list[str]:
         for i in range(start + 1, end):
             tags[i] = f"I-{label}"
     return tags
-
-
-def write_iob2(path: Path, sentences: list[list[str]], tags: list[list[str]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    lines: list[str] = []
-    for tokens, sent_tags in zip(sentences, tags):
-        for i, (word, tag) in enumerate(zip(tokens, sent_tags), start=1):
-            lines.append(f"{i}\t{word}\t{tag}")
-        lines.append("")
-    path.write_text("\n".join(lines), encoding="utf-8")
 
 
 @retry(
@@ -105,39 +73,37 @@ async def _predict_one(
     return json.loads(response.choices[0].message.content)["labels"]
 
 
-async def _run(sentences: list[list[str]]) -> list[list[str]]:
+async def _predict_all(token_lists: list[list[str]]) -> list[list[str]]:
     client = openai.AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
-    tasks = [_predict_one(client, semaphore, sent) for sent in sentences]
+    tasks = [_predict_one(client, semaphore, sent) for sent in token_lists]
     span_lists = await asyncio.gather(*tasks, return_exceptions=True)
-
     predictions: list[list[str]] = []
-    for idx, (sent, spans) in enumerate(zip(sentences, span_lists)):
+    for idx, (sent, spans) in enumerate(zip(token_lists, span_lists)):
         if isinstance(spans, BaseException):
             logger.error("sentence %d failed (%s); writing O-only tags", idx, spans)
             predictions.append(["O"] * len(sent))
         else:
-            predictions.append(spans_to_iob2(len(sent), spans))
+            predictions.append(_token_index_spans_to_iob2(len(sent), spans))
     return predictions
 
 
-def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
-    parser = argparse.ArgumentParser(description="GPT-4o NER zero-shot reference.")
-    parser.add_argument("--input", required=True, type=Path, help="Gold IOB2 file (2-col or 5-col)")
-    parser.add_argument("--output", required=True, type=Path, help="Where to write predictions (IOB2)")
-    parser.add_argument("--limit", type=int, default=None, help="Optional cap for smoke tests")
-    args = parser.parse_args()
+def gpt4o_reference_entrypoint(input_path: Path, output_path: Path) -> None:
+    """Predict NER tags for every sentence in ``input_path`` and write IOB2 to ``output_path``.
 
-    sentences = read_tokens(args.input)
-    if args.limit is not None:
-        sentences = sentences[: args.limit]
-    logger.info("Predicting on %d sentences from %s", len(sentences), args.input)
+    Reuses ``src.common.iob2.read_iob2`` / ``write_iob2`` so the file format matches
+    the rest of the pipeline.
+    """
+    if not os.getenv("OPENAI_API_KEY"):
+        raise RuntimeError("OPENAI_API_KEY must be set to run gpt4o_reference")
 
-    predictions = asyncio.run(_run(sentences))
-    write_iob2(args.output, sentences, predictions)
-    logger.info("Wrote predictions to %s", args.output)
-
-
-if __name__ == "__main__":
-    main()
+    sentences = read_iob2(input_path, validate=False)
+    token_lists = [s.words for s in sentences]
+    logger.info("GPT-4o: predicting on %d sentences from %s", len(sentences), input_path)
+    predicted_tags = asyncio.run(_predict_all(token_lists))
+    predicted_sentences = [
+        Sentence(words=tokens, labels=tags)
+        for tokens, tags in zip(token_lists, predicted_tags)
+    ]
+    write_iob2(predicted_sentences, output_path, ewt_columns=True)
+    logger.info("GPT-4o: wrote predictions to %s", output_path)

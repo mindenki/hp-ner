@@ -1,0 +1,73 @@
+1	Harry	B-CHAR
+2	went	O
+3	to	O
+4	Hogwarts	B-LOC
+5	.	O
+
+1	Hermione	B-CHAR
+2	cast	O
+3	Expelliarmus	B-SPELL
+4	.	O
+
+1	Ron	B-CHAR
+2	visited	O
+3	Diagon	B-LOC
+4	Alley	I-LOC
+5	.	O
+
+1	Dumbledore	B-CHAR
+2	held	O
+3	the	O
+4	Elder	B-ITEM
+5	Wand	I-ITEM
+6	.	O
+
+1	Harry	B-CHAR
+2	learned	O
+3	Wingardium	B-SPELL
+4	Leviosa	I-SPELL
+5	.	O
+
+1	Neville	B-CHAR
+2	found	O
+3	the	O
+4	Marauder	B-ITEM
+5	Map	I-ITEM
+6	.	O
+
+1	Harry	B-CHAR
+2	spoke	O
+3	to	O
+4	Hedwig	B-CHAR
+5	.	O
+
+1	Luna	B-CHAR
+2	went	O
+3	to	O
+4	Hogsmeade	B-LOC
+5	.	O
+
+1	Snape	B-CHAR
+2	brewed	O
+3	a	O
+4	potion	O
+5	.	O
+
+1	Voldemort	B-CHAR
+2	cast	O
+3	Avada	B-SPELL
+4	Kedavra	I-SPELL
+5	.	O
+
+1	Ginny	B-CHAR
+2	used	O
+3	Accio	B-SPELL
+4	.	O
+
+1	Hagrid	B-CHAR
+2	kept	O
+3	Norbert	B-CHAR
+4	at	O
+5	the	O
+6	hut	O
+7	.	O

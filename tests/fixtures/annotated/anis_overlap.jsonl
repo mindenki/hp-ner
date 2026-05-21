@@ -1,0 +1,3 @@
+{"id": 1, "text": "Harry Potter went to Hogwarts.", "label": [[0, 12, "Character"], [21, 29, "Location"]]}
+{"id": 2, "text": "Hermione cast Expelliarmus.", "label": [[0, 8, "Character"], [14, 26, "Spell"]]}
+{"id": 3, "text": "The Gryffindor team won.", "label": [[4, 19, "Organization"]]}
