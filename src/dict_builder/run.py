@@ -46,8 +46,8 @@ def build_dict_entrypoint(output_dir: Path) -> None:
         logger.info("  %s: %d entities", label, len(entities))
 
     logger.info("build_dict_entrypoint: scraping aliases…")
-    scrape_all_labels(canonical)  # writes data/dictionaries/hp_aliases.json internally
+    aliases = scrape_all_labels(canonical)  # writes data/dictionaries/hp_aliases.json internally
 
     logger.info("build_dict_entrypoint: writing per-label .txt files to %s", txts_dir)
-    write_all_dicts(canonical_path, output_dir / "hp_aliases.json", txts_dir)
+    write_all_dicts(canonical, aliases, txts_dir)
     logger.info("build_dict_entrypoint: done")

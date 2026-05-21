@@ -1,6 +1,6 @@
 """Sentence-level filtering for the scraped wiki corpus.
 
-  • Minimum 5 and maximum 60 tokens per sentence
+  • Minimum 5 tokens per sentence
   • Parentheses must be balanced ()
   • MinHash deduplication: filters out similar sentences
 
@@ -57,7 +57,7 @@ def filter_dataset(input_path, output_path, nlp = spacy.blank("en"), lsh = MinHa
                     continue
 
                 tokens = nlp(sentence)
-                if len(tokens) < 5 or len(tokens) > 60:
+                if len(tokens) < 5:
                     dropped.append({"url": record["url"], "title": record["title"], "sentence": sentence, "reason": "Token count"})
                     continue
 

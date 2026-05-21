@@ -6477,7 +6477,7 @@ under	O
 the	O
 alias	O
 "the	O
-Augurey	I-CHAR
+Augurey	B-CHAR
 ",	O
 and	O
 Draco	B-CHAR
@@ -24747,7 +24747,7 @@ other	O
 friends.	O
 
 The	O
-Loyalists	I-ORG
+Loyalists	B-ORG
 wore	O
 dark	O
 red	O
