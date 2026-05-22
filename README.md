@@ -1,275 +1,251 @@
-# HP-NER: Full Project Plan
+# HP-NER — Named Entity Recognition in the Harry Potter Universe
 
-## Repository Layout
+End-to-end NER pipeline for six fictional entity types
+(`CHARACTER`, `LOCATION`, `ORGANIZATION`, `CREATURE`, `SPELL`,
+`ARTIFACT`) on text scraped from the Harry Potter Fandom wiki.
+Compares a DeBERTaV3 baseline against fine-tuned and silver-to-gold
+variants and includes an optional GPT-4o zero-shot reference.
+
+> **Paper:** see `NER_Project_Report.pdf`
+
+---
+
+## Prerequisites
+
+- **Python ≥ 3.11**
+- **[uv](https://docs.astral.sh/uv/)** — manages the venv and installs the project editable
+- **Docker Desktop** — only needed for the Doccano steps (annotation prep & export)
+- **(optional) `OPENAI_API_KEY`** env var — only for `train-and-evaluate --with-llm-reference`
+
+The pipeline runs on **macOS, Linux, and Windows**. Where commands differ, both versions
+are shown side-by-side. PowerShell is the recommended shell on Windows.
+
+---
+
+## Installation
+
+### 1. Install `uv`
+
+**macOS / Linux** (bash/zsh):
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+**Windows** (PowerShell):
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+After install, open a new terminal so `uv` is on your `PATH`.
+
+### 2. Clone and sync
+
+```bash
+git clone https://github.com/mindenki/hp-ner.git
+cd hp-ner
+uv sync
+```
+
+`uv sync` creates a `.venv/`, installs all dependencies pinned in `uv.lock`, and
+installs this project itself in editable mode (so `prepare-annotation`,
+`finalize-gold`, `train-and-evaluate` become console commands).
+
+### 3. (Optional) GPT-4o key
+
+If you plan to use the `--with-llm-reference` flag:
+
+**macOS / Linux:**
+
+```bash
+export OPENAI_API_KEY=sk-...
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$env:OPENAI_API_KEY = "sk-..."
+```
+
+**Windows (cmd.exe):**
+
+```bat
+set OPENAI_API_KEY=sk-...
+```
+
+Persist it across sessions by adding it to your shell profile (`~/.zshrc`,
+`~/.bashrc`) or PowerShell `$PROFILE`, or set it as a permanent user env var
+via System Properties → Environment Variables on Windows.
+
+---
+
+## Reproduce the project end-to-end
+
+Three console scripts, run in order. Each script supports:
+
+- `--only-step STEP` (repeatable) — run only the listed step(s); default = all
+- `--force-<step>` — re-run a step whose output already exists
+
+All scripts can be invoked as `uv run <script-name>` from the project root, on
+any platform.
+
+---
+
+### 1. `prepare-annotation` — build the corpus and seed Doccano
+
+```bash
+uv run prepare-annotation
+```
+
+**Steps** (in declaration order):
+
+| Step               | What it does                              | Skipped if                                  |
+| ------------------ | ----------------------------------------- | ------------------------------------------- |
+| `train_ewt`        | Fine-tunes DeBERTaV3 on EWT NER           | `outputs/baseline/run_*/best_model/` exists |
+| `scrape`           | Crawls the HP Fandom wiki                 | `data/raw/wiki_data.jsonl` exists           |
+| `clean`            | Sentence-split + normalise                | `data/filtered/` exists                     |
+| `build_dict`       | Builds entity dictionary                  | `data/dictionaries/txts/` populated         |
+| `silver_label`     | BERT + dictionary tagging                 | `data/silver/hp_silver.jsonl` exists        |
+| `select_15k`       | Stratified sample of 15 000 sentences     | `data/selected/silver/hp_15k.jsonl` exists  |
+| `select_gold_pool` | Pick 1 250 sentences across 4 buckets     | `data/selected/gold_pool/` populated        |
+| `setup_doccano`    | Create 4 Doccano projects + import JSONLs | `--skip-doccano` passed                     |
+
+The `setup_doccano` step needs Doccano running locally. Start it before that
+step (or pass `--skip-doccano` to defer):
+
+```bash
+cd doccano
+docker compose up -d
+cd ..
+```
+
+> Windows PowerShell users: `cd ..` works the same as on Unix. Avoid the
+> `cd doccano && docker compose up -d && cd -` shortcut from older Unix docs;
+> chain commands with `;` in PowerShell or run them on separate lines.
+
+When `setup_doccano` finishes it opens `http://localhost:8000` in your default
+browser. Log in with the credentials in [doccano/README.md](doccano/README.md).
+
+**Run just one step** (handy when iterating):
+
+```bash
+uv run prepare-annotation --only-step silver_label
+uv run prepare-annotation --only-step clean --only-step silver_label   # repeatable
+uv run prepare-annotation --force-scrape --force-silver                # ignore the skip-if-exists guard
+```
+
+---
+
+### 2. Annotate — humans label in Doccano
+
+Each annotator logs into their pre-loaded Doccano project (4 projects were
+created by `setup_doccano`, one per annotator) and labels their assigned
+sentences using the schema in [annotation_guidelines.md](annotation_guidelines.md).
+See [doccano/README.md](doccano/README.md) for the UI walk-through and
+keyboard shortcuts.
+
+---
+
+### 3. `finalize-gold` — IAA + merge + write IOB2
+
+```bash
+uv run finalize-gold
+```
+
+**Steps:**
+
+| Step                  | What it does                                            | Notes                                                                    |
+| --------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `export_from_doccano` | Pulls JSONL exports from running Doccano                | Needs Doccano up; `--skip-export` if `data/annotated/` already populated |
+| `compute_iaa`         | Pairwise Cohen κ per token                              | Hard-fails below 0.7 unless `--allow-low-agreement`                      |
+| `merge_gold`          | Majority vote on overlap; interactive prompt on ties    | `--non-interactive` skips conflicts with a warning                       |
+| `write_iob2`          | Writes `data/selected/{gold,silver}/{gold,silver}.iob2` | Always last                                                              |
+
+Conflict resolutions are persisted to `data/iaa/overrides.jsonl` so re-runs
+are repeatable.
+
+**Common variants:**
+
+```bash
+uv run finalize-gold --skip-export                                         # if data/annotated/ is already there
+uv run finalize-gold --only-step compute_iaa                               # just the agreement report
+uv run finalize-gold --non-interactive --allow-low-agreement               # batch mode
+```
+
+---
+
+### 4. `train-and-evaluate` — split + 6 pipelines + eval
+
+```bash
+uv run train-and-evaluate
+```
+
+**Steps:**
+
+| Step              | What it does                                                   |
+| ----------------- | -------------------------------------------------------------- |
+| `split_gold`      | Stratified 80/10/10 of `gold.iob2` → `train/dev/test.iob2`     |
+| `run_pipelines`   | Trains the six pipelines defined in `configs/pipelines.yaml`   |
+| `aggregate_plots` | Cross-pipeline learning-curve PNG + summary CSV                |
+| `gpt4o_reference` | GPT-4o zero-shot predictions (requires `--with-llm-reference`) |
+
+**Common variants:**
+
+```bash
+uv run train-and-evaluate --with-llm-reference                # add the GPT-4o row
+uv run train-and-evaluate --only-pipeline gold_from_ewt       # train one pipeline only
+uv run train-and-evaluate --only-step aggregate_plots         # re-build plots without re-training
+```
+
+Outputs land under `outputs/pipelines/<name>/run_*/` (per-pipeline checkpoints,
+predictions, metrics) and `outputs/aggregate/` (`learning_curves_all.png`,
+`summary.csv`).
+
+> **GPU**: on Linux with CUDA 12.8 GPUs, `uv` will install the CUDA build of
+> PyTorch automatically via the `pytorch-cu128` index. On macOS / Windows the
+> CPU build is used. Training the six pipelines end-to-end on CPU is slow
+> (hours); a single GPU is recommended for full runs.
+
+---
+
+## Configuration
+
+All hyperparameters live in YAML files under [configs/](configs/):
+
+- [`baseline.yaml`](configs/baseline.yaml) — EWT baseline training (used by
+  `prepare-annotation --only-step train_ewt`)
+- [`pipelines.yaml`](configs/pipelines.yaml) — the six HP fine-tuning
+  pipelines (used by `train-and-evaluate`)
+
+Edit the YAML, re-run the script — no code changes needed.
+
+---
+
+## Repository layout
 
 ```
 hp-ner/
-├── pyproject.toml             # UV-managed dependencies
-├── README.md
-├── .python-version
-├── data/
-│   ├── raw/                   # Scraped HTML/text
-│   ├── filtered/              # Post-filtering sentences
-│   ├── annotated/             # IOB2 annotation files per annotator
-│   ├── merged/                # Adjudicated gold standard
-│   └── ewt/                   # EWT train/dev/test (IOB2)
-├── src/
-│   └── hp_ner/
-│       ├── __init__.py
-│       ├── scraping/
-│       │   ├── __init__.py
-│       │   ├── scraper.py         # WikiScraper class
-│       │   └── cleaner.py         # TextCleaner class
-│       ├── preprocessing/
-│       │   ├── __init__.py
-│       │   ├── sentence_filter.py # SentenceFilter class
-│       │   └── iob2.py            # IOB2Reader / IOB2Writer classes
-│       ├── annotation/
-│       │   ├── __init__.py
-│       │   └── agreement.py       # AgreementCalculator (Cohen's kappa)
-│       ├── models/
-│       │   ├── __init__.py
-│       │   ├── baseline.py        # BertNERBaseline class
-│       │   ├── enhanced.py        # EnhancedNER class (DAPT + CRF)
-│       │   └── llm_eval.py        # LLMEvaluator class (OpenAI/Anthropic API)
-│       ├── training/
-│       │   ├── __init__.py
-│       │   ├── trainer.py         # NERTrainer class
-│       │   └── dapt.py            # DomainAdaptivePretrainer class
-│       └── evaluation/
-│           ├── __init__.py
-│           ├── metrics.py         # MetricsCalculator class
-│           ├── ablation.py        # AblationStudy class
-│           ├── learning_curve.py  # LearningCurveAnalyzer class
-│           └── analysis.py        # QualitativeAnalyzer class
-├── scripts/
-│   ├── run_scrape.py
-│   ├── run_filter.py
-│   ├── run_agreement.py
-│   ├── run_train_baseline.py
-│   ├── run_train_enhanced.py
-│   ├── run_eval_llm.py
-│   └── run_analysis.py
-└── notebooks/                 # Exploratory / result visualization only
+├── configs/                           baseline.yaml, pipelines.yaml
+├── doccano/                           local docker-compose stack + setup guide
+├── llm_reference/                     GPT-4o zero-shot reference (predict.py + prompt.py)
+├── legacy/                            Azure-VM artefacts (not used by the pipeline)
+├── scripts/                           the 3 orchestrator entry points
+│   ├── prepare_annotation.py
+│   ├── finalize_gold.py
+│   └── train_and_evaluate.py
+├── src/                               library code (namespace package, no __init__.py)
+│   ├── common/                        IOB2 reader/writer, span helpers, logging
+│   ├── modeling/                      DeBERTa NER: dataset, model, trainer, evaluator, splitter, plots
+│   ├── scraping/   preprocessing/     wiki crawler + cleaner + sentence filter
+│   ├── dict_builder/                  entity-dictionary builder
+│   ├── silver_labeling/               BERT + dictionary silver tagger
+│   ├── selection/                     stratified sampling + 4-bucket gold pool
+│   ├── annotation/                    Doccano client + merge logic
+│   ├── iaa/                           Cohen κ agreement
+│   └── baseline/                      EWT NER baseline trainer
+├── tests/                             pytest smoke tests + fixtures
+└── pyproject.toml
 ```
 
 ---
-
-## Phase 1 — Data Collection
-
-**`scraping/scraper.py` → `WikiScraper`**
-- Input: seed URLs (Harry Potter Fandom wiki categories)
-- Uses `requests` + `BeautifulSoup4`; respects `robots.txt`
-- Recursively follows internal links up to configurable depth
-- Outputs: raw `.jsonl` with `{url, title, paragraphs[]}`
-
-**`scraping/cleaner.py` → `TextCleaner`**
-- Strips wiki markup artifacts, citation brackets `[1]`, infobox text
-- Unicode normalization (NFC)
-
-**`preprocessing/sentence_filter.py` → `SentenceFilter`**
-
-Filtering criteria to implement:
-- Min tokens: 5, Max tokens: 60 (configurable)
-- Drop sentences with >40% numeric tokens
-- Drop sentences with unbalanced parentheses
-- Drop if detected language ≠ English (via `langdetect`)
-- MinHash deduplication (Jaccard threshold 0.8) via `datasketch`
-
----
-
-## Phase 2 — Annotation
-
-**Format:** IOB2, one token per line, space-separated: `token label`
-
-**Entity types:**
-| Tag | Description |
-|---|---|
-| `CHARACTER` | Named persons (Harry Potter, Dumbledore) |
-| `LOCATION` | Places (Hogwarts, Diagon Alley) |
-| `ORGANIZATION` | Groups/institutions (Ministry of Magic, Order of the Phoenix) |
-| `CREATURE` | Non-human beings (Dementor, Hippogriff) |
-| `SPELL` | Incantations (Expelliarmus, Avada Kedavra) |
-| `ARTIFACT` | Objects with narrative significance (Horcrux, Marauder's Map) |
-
-**Overlap strategy:**
-- Assign 85% of sentences uniquely per annotator
-- 15% shared across all annotators → IAA calculation
-
-**`annotation/agreement.py` → `AgreementCalculator`**
-- Converts IOB2 spans to (start, end, label) tuples
-- Computes token-level and span-level Cohen's κ
-- Reports per-class κ breakdown
-- Target: κ ≥ 0.7 before merging
-
----
-
-## Phase 3 — Baseline Model
-
-**`models/baseline.py` → `BertNERBaseline`**
-
-```
-Recommended model: dslim/bert-base-NER
-Alternatives (stronger):
-  - dbmdz/bert-large-cased-finetuned-conll03-english
-  - Jean-Baptiste/roberta-large-ner-english
-  - microsoft/deberta-v3-base  ← recommended upgrade
-  - studio-ousia/luke-base     ← entity-aware, best for NER
-```
-
-- Load via `transformers.AutoModelForTokenClassification`
-- Replace classification head to match HP label set
-- Fine-tune on annotated HP train split + EWT train split
-- Evaluate on HP dev / EWT dev
-- Save best checkpoint by span-F1
-
-**`training/trainer.py` → `NERTrainer`**
-- Wraps HuggingFace `Trainer` with custom `DataCollatorForTokenClassification`
-- Handles subword-to-word label alignment
-- Early stopping on dev span-F1 (patience=3)
-
----
-
-## Phase 4 — Enhanced Model
-
-### Enhancement A: Domain-Adaptive Pretraining (DAPT)
-
-**`training/dapt.py` → `DomainAdaptivePretrainer`**
-- Continue MLM on scraped HP corpus (before fine-tuning)
-- Uses `DataCollatorForLanguageModeling` (mlm_probability=0.15)
-- Run for ~3 epochs on HP corpus
-- Save adapted checkpoint → used as init for fine-tuning
-
-### Enhancement B: CRF Decoding Layer
-
-**`models/enhanced.py` → `EnhancedNER`**
-- Replaces softmax head with linear-chain CRF (`torchcrf`)
-- Encodes valid IOB2 transitions as hard constraints in transition matrix
-- Otherwise same training loop as baseline
-
-**Stack both:** DAPT init → fine-tune with CRF head = full enhanced model.
-
----
-
-## Phase 5 — LLM Evaluation
-
-**`models/llm_eval.py` → `LLMEvaluator`**
-- Zero-shot prompt per sentence to GPT-4o or Claude via API
-- System prompt defines all 6 entity types with examples
-- Parses JSON response `{entities: [{text, label, start, end}]}`
-- Converts to IOB2 for unified evaluation
-- Rate-limited with exponential backoff
-
-Prompt template:
-```
-You are a Named Entity Recognition system for the Harry Potter universe.
-Identify all named entities in the sentence below.
-Entity types: CHARACTER, LOCATION, ORGANIZATION, CREATURE, SPELL, ARTIFACT.
-Return ONLY valid JSON: {"entities": [{"text": "...", "label": "...", "start": N, "end": N}]}
-
-Sentence: {sentence}
-```
-
----
-
-## Phase 6 — Evaluation & Analysis
-
-### Metrics (`evaluation/metrics.py` → `MetricsCalculator`)
-
-| Metric | Implementation |
-|---|---|
-| Span-level P/R/F1 | `seqeval` library |
-| Per-class F1 | `seqeval` with `scheme=IOB2` |
-| Partial match (boundary correct, label wrong) | Custom: compare span boundaries independently of label |
-| Exact span accuracy | Custom: strict (start, end, label) match |
-| Majority-class baseline | Always predict most frequent entity token |
-
-### Ablation Study (`evaluation/ablation.py` → `AblationStudy`)
-
-Run in order, each as separate experiment:
-1. BERT (no fine-tuning) → majority class F1
-2. BERT fine-tuned on EWT only
-3. BERT fine-tuned on HP annotated only
-4. BERT fine-tuned on EWT + HP
-5. DAPT → fine-tune on EWT + HP
-6. DAPT → fine-tune with CRF on EWT + HP (= full enhanced)
-7. LLM zero-shot
-8. LLM few-shot (5 examples in prompt)
-
-### Learning Curve (`evaluation/learning_curve.py` → `LearningCurveAnalyzer`)
-- Train on [10%, 20%, 40%, 60%, 80%, 100%] of HP annotated train
-- Plot dev F1 vs. train size for baseline and enhanced model
-
-### Qualitative Analysis (`evaluation/analysis.py` → `QualitativeAnalyzer`)
-- Confusion matrix across entity types
-- Error bucketing: missed entities / wrong label / boundary off / spurious
-- Per-sentence difficulty scoring (entity density, sentence length)
-
-### Feature / Input Importance
-- Integrated Gradients via `captum` library on baseline model
-- Token attribution for FP and FN examples
-- Report top-10 tokens per entity type that drive predictions
-
----
-
-## pyproject.toml (UV)
-
-```toml
-[project]
-name = "hp-ner"
-version = "0.1.0"
-requires-python = ">=3.11"
-dependencies = [
-  "transformers>=4.40",
-  "datasets>=2.19",
-  "torch>=2.2",
-  "torchcrf>=1.1",
-  "seqeval>=1.2",
-  "scikit-learn>=1.4",
-  "beautifulsoup4>=4.12",
-  "requests>=2.31",
-  "langdetect>=1.0",
-  "datasketch>=1.6",
-  "openai>=1.23",
-  "anthropic>=0.25",
-  "captum>=0.7",
-  "pydantic>=2.7",
-  "rich>=13.7",
-  "typer>=0.12",
-]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-```
-
----
-
-## Reproducibility Checklist (README.md must cover)
-
-1. `uv sync` — install all dependencies
-2. `uv run scripts/run_scrape.py` — scrape and filter
-3. Manual annotation step (instructions for Doccano or BRAT)
-4. `uv run scripts/run_agreement.py` — compute IAA
-5. `uv run scripts/run_train_baseline.py` — fine-tune baseline
-6. `uv run scripts/run_train_enhanced.py` — DAPT + CRF
-7. `uv run scripts/run_eval_llm.py` — LLM zero/few-shot
-8. `uv run scripts/run_analysis.py` — all evaluation tables + plots
-
-All random seeds fixed via `seed=42` in all trainers and dataset splits.
-All results written to `results/` as JSON + CSV.
-
----
-
-## Final Paper Sections (ACL, 5 pages)
-
-| Section | Content |
-|---|---|
-| Introduction | Research question, motivation, contributions |
-| Related Work | BERT NER, domain adaptation, fictional NER, LLM NER |
-| Data | Scraping, filtering stats, annotation process, IAA results |
-| Models | Baseline, DAPT, CRF, LLM prompting setup |
-| Experiments | Training details, hyperparameters, all evaluation settings |
-| Results | Table: P/R/F1 per model × dataset; ablation table; learning curves |
-| Analysis | Qualitative errors, token importance, partial match breakdown |
-| Conclusion | Answer research question, limitations, future work |

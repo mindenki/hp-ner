@@ -1,0 +1,53 @@
+# Caddyfile — HP-NER Doccano reverse proxy
+#
+# Domain is read from the DOCCANO_DOMAIN env var (set in .env).
+# Caddy automatically obtains and renews a Let's Encrypt TLS certificate.
+#
+# Access model:
+#   Annotators  -> https://{$DOCCANO_DOMAIN}    (port 443, Caddy-filtered)
+#   Admin/scripts -> SSH tunnel -> http://localhost:8000 (unrestricted)
+
+{$DOCCANO_DOMAIN} {
+
+    # ── Block Django admin panel ───────────────────────────────────────────
+    respond /admin/* 403
+
+    # ── Block file import endpoints ────────────────────────────────────────
+    # filepond upload + import trigger used by setup scripts
+    respond /v1/fp/* 403
+
+    @import_trigger {
+        method POST
+        path /v1/projects/*/upload
+    }
+    respond @import_trigger 403
+
+    # ── Block project creation and deletion ────────────────────────────────
+    @project_write {
+        method POST DELETE
+        path /v1/projects /v1/projects/*
+    }
+    respond @project_write 403
+
+    # ── Block member management ────────────────────────────────────────────
+    @member_write {
+        method POST PUT PATCH DELETE
+        path /v1/projects/*/members*
+    }
+    respond @member_write 403
+
+    # ── Block label management ─────────────────────────────────────────────
+    @label_write {
+        method POST PUT PATCH DELETE
+        path /v1/projects/*/span-types*
+    }
+    respond @label_write 403
+
+    # ── Block user management ──────────────────────────────────────────────
+    respond /v1/users/* 403
+
+    # ── Allow everything else -> Doccano ───────────────────────────────────
+    # Covers: login, listing projects, loading sentences,
+    #         submitting/editing/deleting annotations, static assets.
+    reverse_proxy doccano:8000
+}

@@ -1,0 +1,56 @@
+model:
+  name: microsoft/deberta-v3-base
+  max_length: 128
+
+paths:
+  silver: data/selected/silver/silver.iob2
+  gold_train: data/selected/gold/train.iob2
+  gold_dev: data/selected/gold/dev.iob2
+  gold_test: data/selected/gold/test.iob2
+  ewt_checkpoint: outputs/baseline/best_model
+  output_root: outputs/pipelines
+
+training: # shared defaults; any pipeline stage can override
+  num_epochs: 3
+  learning_rate: 5.0e-6
+  batch_size: 16
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+  device: cpu
+  seed: 42
+
+evaluation:
+  batch_size: 32
+
+pipelines:
+  - name: silver_from_ewt
+    init_from: ewt_checkpoint
+    stages:
+      - data: silver
+
+  - name: silver_from_base
+    init_from: base
+    stages:
+      - data: silver
+
+  - name: gold_from_ewt
+    init_from: ewt_checkpoint
+    stages:
+      - data: gold_train
+
+  - name: gold_from_base
+    init_from: base
+    stages:
+      - data: gold_train
+
+  - name: silver_then_gold_from_ewt
+    init_from: ewt_checkpoint
+    stages:
+      - data: silver
+      - data: gold_train
+
+  - name: silver_then_gold_from_base
+    init_from: base
+    stages:
+      - data: silver
+      - data: gold_train
