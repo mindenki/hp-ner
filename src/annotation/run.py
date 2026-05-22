@@ -231,5 +231,17 @@ def write_iob2_entrypoint(
             text = row.get("text") or " ".join(row.get("tokens", []))
             if text in gold_texts:
                 continue
-            silver_sentences.append(Sentence(words=row["tokens"], labels=row["labels"]))
+            tokens = row["tokens"]
+            labels = row.get("silver_labels")
+            if labels is None:
+                labels = row.get("labels", [])
+                if not labels or isinstance(labels[0], str):
+                    # Already token-level IOB2 tags, or empty labels.
+                    pass
+                else:
+                    labels = doccano_record_to_sentence(
+                        {"text": text, "labels": labels},
+                        label_map=DOCCANO_TO_IOB2,
+                    ).labels
+            silver_sentences.append(Sentence(words=tokens, labels=labels))
     write_iob2(silver_sentences, silver_iob2_out, ewt_columns=True)

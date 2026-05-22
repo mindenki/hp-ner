@@ -27,7 +27,7 @@ def _load_per_token_labels(path: Path) -> dict[int, list[str]]:
                 continue
             record = json.loads(line)
             sentence = doccano_record_to_sentence(record)  # no label_map: keep raw display labels
-            out[int(record["id"])] = sentence.labels
+            out[record["id"]] = sentence.labels
     return out
 
 
