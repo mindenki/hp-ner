@@ -17,7 +17,7 @@ from src.common.iob2 import Sentence, read_iob2, write_iob2
 
 logger = logging.getLogger(__name__)
 
-OPENAI_MODEL = "gpt-4.1"
+OPENAI_MODEL = "gpt-4o"
 MAX_CONCURRENT_REQUESTS = 2
 
 
@@ -151,3 +151,4 @@ def gpt4o_reference_entrypoint(input_path: Path, output_path: Path) -> None:
     ]
     write_iob2(predicted_sentences, output_path, ewt_columns=True)
     logger.info("GPT-4o: wrote predictions to %s", output_path)
+
